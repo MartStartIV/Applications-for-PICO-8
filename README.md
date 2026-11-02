@@ -30,9 +30,9 @@
   <h4>📸 Screenshots</h4>
   <table width="100%">
     <tr>
-      <td align="center" width="33.3%"><img src="screenshot1.png" alt="Calculator Xtree Standard Mode" width="100%"></td>
-      <td align="center" width="33.3%"><img src="screenshot2.png" alt="Calculator Xtree Scientific Mode" width="100%"></td>
-      <td align="center" width="33.3%"><img src="screenshot3.png" alt="Calculator Xtree Cyberpunk Theme" width="100%"></td>
+      <td align="center" width="33.3%"><img src="assets/screenshot1.jpg" alt="Calculator Xtree Standard Mode" width="100%"></td>
+      <td align="center" width="33.3%"><img src="assets/screenshot2.jpg" alt="Calculator Xtree Scientific Mode" width="100%"></td>
+      <td align="center" width="33.3%"><img src="assets/screenshot3.jpg" alt="Calculator Xtree Cyberpunk Theme" width="100%"></td>
     </tr>
   </table>
 
