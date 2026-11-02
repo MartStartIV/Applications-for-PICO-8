@@ -6,7 +6,7 @@
 
 <!-- SYSTEM NOTICE (Using blockquote simulation) -->
 <blockquote>
-  <strong>⚠️ Supported Systems:</strong> This core is actively supported on platforms running emulation frontends and custom firmwares such as <strong>muOS</strong> (RG35XX series), <strong>ArkOS</strong>, and compatible RetroArch handheld environments utilizing TreeFrogUI.
+  <strong>⚠️ Supported Systems:</strong> This core is actively supported on platforms running emulation frontends and custom frontend such as <strong>SwitchFrogUi</strong> (R36SX and clones), <strong>H.OS</strong>, and compatible PicoArch handheld environments utilizing TreeFrogUI.
 </blockquote>
 
 <br>
