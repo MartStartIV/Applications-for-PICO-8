@@ -40,7 +40,7 @@
       </td>
       <td align="center" width="33.3%">
         <img src="assets/screenshot3.jpg" alt="Calculator Xtree Cyberpunk Theme" width="100%">
-        <br><sub><b>Cyberpunk Theme</b></sub>
+        <br><sub><b>Cyberpunk Themes</b></sub>
       </td>
     </tr>
   </table>
