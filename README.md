@@ -48,10 +48,10 @@
   <!-- SHORTCUTS SECTION -->
   <h4>⌨️ Additional Functions & Key Shortcuts</h4>
   <ul>
-    <li><strong>B + Flecha Arriba:</strong> Alterna entre el Modo Estándar y el Modo Científico Avanzado. El indicador en pantalla cambiará automáticamente (<code>MODE: STANDARD / MODE: SCIENTIFIC</code>).</li>
-    <li><strong>B + Flecha Derecha:</strong> Cambia de forma inmediata entre los 5 Temas de Color Cyberpunk de alta fidelidad, redibujando toda la interfaz al instante.</li>
-    <li><strong>B + Flecha Izquierda:</strong> Activa o desactiva la pantalla cinematográfica "About" (Acerca de), iniciando el scroll automático con los datos de desarrollo, características y la versión de la app.</li>
-    <li><strong>A + Flecha Derecha:</strong> Ejecuta un Clear All Rápido. Limpia el display principal (0), borra el historial de operaciones de la sub-pantalla y resetea las variables internas para iniciar una cuenta desde cero de forma segura.</li>
+    <li><strong>B + Up Arrow:</strong> Switch between Standard Mode and Advanced Scientific Mode. The on-screen indicator will change automatically. (<code>MODE: STANDARD / MODE: SCIENTIFIC</code>).</li>
+    <li><strong>B + Right Arrow:</strong> Switch instantly between 5 high-fidelity Cyberpunk color themes, redrawing the entire interface in a flash.</li>
+    <li><strong>B + Left Arrow:</strong> Enable or disable the cinematic "About" screen, which triggers an automatic scroll displaying development details, features, and the app version.</li>
+    <li><strong>A + Right Arrow:</strong> Perform a Quick Clear All. This clears the main display (0), erases the operation history from the sub-display, and resets internal variables to safely start a calculation from scratch.</li>
   </ul>
 
   <br>
@@ -62,10 +62,10 @@
     <br>
     <h4>Version 0.01 (Initial Release)</h4>
     <ul>
-      <li>Version inicial.</li>
-      <li>Se ha iniciado soporte para la calculadora con funciones basicas pero combinadas con el modo cientifico si deseas.</li>
-      <li>Se ha incorporado compatibilidad con el modo cientifico.</li>
-      <li>Se puede cambiar los colores que vienen predeterminado en esta versión con los accesos rapidos.</li>
+      <li>Initial version.</li>
+      <li>Support has been added for a calculator that features basic functions, which can be combined with a scientific mode if you wish.</li>
+      <li>Support for scientific mode has been added.</li>
+      <li>You can change the default colors in this version using the quick-access options.</li>
     </ul>
   </details>
 </div>
