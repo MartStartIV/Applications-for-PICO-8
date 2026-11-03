@@ -19,7 +19,7 @@
 <!-- APP CARD START -->
 <div>
   <!-- APP HEADER -->
-  <h3>🧮 Calculator Xtree <kbd>V0.01</kbd></h3>
+  <h3>🧮 Calculator Xtree <kbd>V0.02</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -59,6 +59,14 @@
   <!-- CHANGELOG DROPDOWN (Native HTML Accordion) -->
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
+    <br>
+    <h4>Version 0.02 (current version)</h4>
+    <ul>
+      <li>Some issues with certain scientific functions have been resolved.</li>
+      <li>An "About" section has been added, indicating who was responsible for developing this software in conjunction with AI.</li>
+      <li>Some errors in mathematical operations have been fixed.</li>
+      <li>Some details resolved.</li>
+    </ul>
     <br>
     <h4>Version 0.01 (Initial Release)</h4>
     <ul>
