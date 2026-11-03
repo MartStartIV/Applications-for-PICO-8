@@ -60,14 +60,21 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.02 (current version)</h4>
+    <h4>Version 0.03 (current version)</h4>
+    <ul>
+      <li>The issue with double-clicks when pressing the numbers for mathematical operations has been resolved, making it more stable this time around.</li>
+      <li>If your retro console along with its system features a real or simulated RTC (Real-Time Clock), you will now be able to see the console's current time displayed within the calculator itself.</li>
+      <li>Some corrections have been made that will soon allow the scientific LOG option to function.</li>
+      <li>A total of 10 themes have been added; you can now select whichever one you like.</li>
+      <li>Now the calculator app will remember the last theme you selected, no problem! :)</li>
+    </ul>
+    <h4>Version 0.02</h4>
     <ul>
       <li>Some issues with certain scientific functions have been resolved.</li>
       <li>An "About" section has been added, indicating who was responsible for developing this software in conjunction with AI.</li>
       <li>Some errors in mathematical operations have been fixed.</li>
       <li>Some details resolved.</li>
     </ul>
-    <br>
     <h4>Version 0.01 (Initial Release)</h4>
     <ul>
       <li>Initial version.</li>
