@@ -2,27 +2,25 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.01]
--- PARTE 1: CORE DE INICIALIZACIÓN, COMBOS Y CONTROLADORES
+-- CALCULATOR XTREE FORCE [v0.02]
+-- PARTE 1: CORE DE INICIALIZACIÓN Y CONFIGURACIÓN DE GRIDS
 -- =========================================================
 
 function _init()
   -- Información del Sistema
   id_nombre = "XTREE FORCE"
-  id_version = "V0.01"
+  id_version = "V0.02"
   
-  -- Modos de Ejecución (0: Estándar, 1: Científico Avanzado)
+  -- Modos de Ejecución (0: Estándar, 1: Científico, 2: Pantalla Acerca de)
   modo_actual = 0 
   
   -- Gestión de Valores y Registros (Memoria Operacional)
-  v_pantalla = "0"     -- Texto actual en el Display principal
-  v_historial = ""    -- Registro de la operación previa completa
-  memoria = 0         -- Registro M+
+  v_pantalla = "0"     
+  v_historial = ""    
+  memoria = 0         
   
   -- Variables de control de flujo matemático
-  n1 = 0
-  n2 = 0
-  op = ""
+  n1 = 0 n2 = 0 op = ""
   limpiar_pantalla = false
   tiene_punto = false
   
@@ -36,7 +34,7 @@ function _init()
   }
   idx_tema = 1
   
-  -- ESTRUCTURA DEL TECLADO DINÁMICO (Grid Adaptativo 4x5) - TOTALMENTE PULIDO
+  -- ESTRUCTURA DEL TECLADO DINÁMICO (Grid Adaptativo 4x5 Pulido)
   pad_estandar = {
     {"C",2},   {"DEL",2}, {"M+",2},  {"/",1},
     {"7",0},   {"8",0},   {"9",0},   {"*",1},
@@ -46,57 +44,127 @@ function _init()
   }
   
   pad_cientifico = {
-    {"SIN",3},  {"COS",3},  {"TAN",3},  {"^",3},    -- ^ cambiado a tipo 3 para control de flujo
-    {"ASN",3},  {"ACS",3},  {"ATN",3},  {"SQRT",3}, -- Textos recortados a 3 caracteres para nitidez visual
+    {"SIN",3},  {"COS",3},  {"TAN",3},  {"^",3},    
+    {"ASN",3},  {"ACS",3},  {"ATN",3},  {"SQRT",3}, 
     {"LN",3},   {"LOG",3},  {"EXP",3},  {"ABS",3},
-    {"PI",0},   {"E",0},    {"MOD",3},  {"1/X",3},  -- MOD cambiado a tipo 3 para evitar bloqueos
-    {"PI2",3},  {"RND",3},  {"FACT",3}, {"RET",2}   -- Reemplazados RAD/DEG por Pi^2 y Random real ejecutable
+    {"PI",0},   {"E",0},    {"MOD",3},  {"1/X",3},  
+    {"PI2",3},  {"RND",3},  {"FACT",3}, {"RET",2}   
   }
-
   
   -- Coordenadas del Cursor
   cx = 0 cy = 0
   max_cx = 4 max_cy = 5 
   
   -- Mascota Oficial (Ranita Xtree)
-  ranita_x = 114
-  ranita_y = 114
-  ranita_anim = 0 
+  ranita_x = 114 ranita_y = 114 ranita_anim = 0 
+  
+  -- CONFIGURACIÓN DEL SCROLL "ACERCA DE"
+  textos_acercade = {
+    "calculator xtree force",
+    "version: "..id_version,
+    "------------------------",
+    "desarrollador:",
+    "martstartiv",
+    "en conjunto con:",
+    "la inteligencia artificial",
+    "------------------------",
+    "sobre la aplicacion:",
+    "consola matematica de",
+    "alta precision bignum",
+    "disenada para romper las",
+    "limitaciones nativas",
+    "graficas de pico-8.",
+    "------------------------",
+    "funcionalidades pro:",
+    "- bignum multinivel (+-*/)",
+    "- algebra avanzada (^, mod)",
+    "- trigonometria nativa",
+    "- 5 temas cyberpunk",
+    "- bignum logs y exp",
+    "------------------------",
+    "atajos de botones:",
+    "b + arriba : modo sci",
+    "b + der    : cambia tema",
+    "b + izq    : acerca de",
+    "a + der    : clear total",
+    "------------------------",
+    "gracias por usar",
+    "xtree force software!"
+  }
+  
+  -- Variables de posición del Scroll
+  scroll_y_inicio = 120 
+  scroll_y = scroll_y_inicio
+  scroll_velocidad = 0.4 
 end
+-- =========================================================
+-- CALCULATOR XTREE FORCE [v0.02]
+-- PARTE 2: LÓGICA DE ACTUALIZACIÓN, COMBOS Y CONTROL DE SCROLL
+-- =========================================================
 
 function _update60()
   ranita_anim = (ranita_anim + 1) % 60
   
   -- COMBO 1: B (5) + FLECHA ARRIBA (2) -> Alternar modo Científico / Estándar
   if btn(5) and btnp(2) then
-    if modo_actual == 0 then
-      modo_actual = 1
-    else
-      modo_actual = 0
+    if modo_actual != 2 then
+      modo_actual = (modo_actual == 0) and 1 or 0
+      cx = 0 cy = 0 limpiar_pantalla = true
+      sfx(0)
     end
-    cx = 0 cy = 0 -- Reseteo del cursor
-    limpiar_pantalla = true
-    sfx(0) 
     return
   end
   
-  -- COMBO 2: B (5) + FLECHA ABAJO (3) -> Cambiar Tema de Color
-  if btn(5) and btnp(3) then
-    idx_tema = idx_tema + 1
-    if idx_tema > #temas then idx_tema = 1 end
-    sfx(1) 
+  -- ✅ COMBO 2 CORREGIDO: B (5) + FLECHA DERECHA (1) -> Cambiar Tema de Color
+  if btn(5) and btnp(1) then
+    if modo_actual != 2 then
+      idx_tema = idx_tema + 1
+      if idx_tema > #temas then idx_tema = 1 end
+      sfx(1)
+    end
     return
   end
 
-  -- COMBO 3: A (4) + FLECHA DERECHA (1) -> Clear All Rápido
-  if btn(4) and btnp(1) then
-    v_pantalla = "0" v_historial = "" n1 = 0 n2 = 0 op = ""
-    tiene_punto = false limpiar_pantalla = false
-    sfx(2)
+  -- COMBO 3: A (4) + FLECHA DERECHA (1) -> Clear All Rápido (Solo si no presiona B)
+  if btn(4) and btnp(1) and not btn(5) then
+    if modo_actual != 2 then
+      v_pantalla = "0" v_historial = "" n1 = 0 n2 = 0 op = ""
+      tiene_punto = false limpiar_pantalla = false
+      sfx(2)
+    end
     return
   end
 
-  -- NAVEGACIÓN POR LAS TECLAS
+  -- COMBO 4: B (5) + FLECHA IZQUIERDA (0) -> Activar/Desactivar Acerca De con Scroll
+  if btn(5) and btnp(0) then
+    if modo_actual != 2 then
+      modo_actual = 2
+      scroll_y = scroll_y_inicio 
+    else
+      modo_actual = 0
+    end
+    sfx(0)
+    return
+  end
+
+  -- CONTROL DEL MODO ACERCA DE (SCROLL AUTOMÁTICO)
+  if modo_actual == 2 then
+    scroll_y = scroll_y - scroll_velocidad
+    local limite_final = 10 - (#textos_acercade * 9)
+    
+    if scroll_y < limite_final then
+      modo_actual = 0
+      sfx(1)
+    end
+    
+    if btnp(4) then
+      modo_actual = 0
+      sfx(1)
+    end
+    return -- Congela la navegación matemática mientras el scroll esté corriendo
+  end
+
+  -- NAVEGACIÓN ESTÁNDAR POR LAS TECLAS MATEMÁTICAS
   if btnp(0) then cx = (cx - 1) % max_cx end 
   if btnp(1) then cx = (cx + 1) % max_cx end 
   if btnp(2) then cy = (cy - 1) % max_cy end 
@@ -113,17 +181,56 @@ function _update60()
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.01]
--- PARTE 2: MOTOR GRÁFICO, DIBUJO DE RANA Y PROCESAMIENTO NÚMERICO
+-- CALCULATOR XTREE FORCE [v0.02]
+-- PARTE 3: MOTOR GRÁFICO AISLADO Y PROCESADOR MATEMÁTICO
 -- =========================================================
 
 function _draw()
+  -- Asegurar reset absoluto de cualquier recorte gráfico residual
+  clip()
+  
   local c_fondo   = temas[idx_tema][1]
   local c_display = temas[idx_tema][2]
   local c_txt_dis = temas[idx_tema][3]
   local c_btn_bse = temas[idx_tema][4]
   local c_btn_txt = temas[idx_tema][5]
   
+  -- ✅ AISLAMIENTO TOTAL: Si modo_actual es 2 (Acerca de), renderiza una pantalla cinematográfica limpia
+  if modo_actual == 2 then
+    cls(0) -- Fondo negro puro estilo créditos de cine
+    rect(0, 0, 127, 127, 7) -- Borde elegante
+    
+    -- Aplicar ventana de recorte segura en el centro
+    clip(4, 12, 120, 96)
+    
+    for idx, linea in ipairs(textos_acercade) do
+      local linea_y = flr(scroll_y + (idx - 1) * 9)
+      
+      if linea_y >= 0 and linea_y <= 120 then
+        local col_linea = 7
+        if sub(linea, 1, 1) == "-" then col_linea = 5
+        elseif idx == 1 or idx == 4 or idx == 6 or idx == 9 or idx == 16 or idx == 23 then col_linea = 10
+        elseif idx == 5 or idx == 7 then col_linea = 11
+        end
+        
+        local lx = 64 - (#linea * 4) / 2
+        print(linea, lx, linea_y, col_linea)
+      end
+    end
+    
+    -- Liberar recorte gráfico obligatoriamente
+    clip()
+    
+    -- Pie de página fijo de salida
+    rectfill(1, 114, 126, 126, 0)
+    line(1, 113, 126, 113, 6)
+    local c_sal = (ranita_anim < 30) and 5 or 7
+    print("presiona (a) para saltar", 16, 117, c_sal)
+    render_ranita_xtree(ranita_x, ranita_y)
+    return -- Detiene el draw aquí para evitar que se mezclen elementos de la calculadora
+  end
+
+  -- RENDERIZADO NORMAL DE LA CALCULADORA (Solo si modo_actual != 2)
   cls(c_fondo)
   
   -- Header Superior
@@ -132,7 +239,7 @@ function _draw()
   print(id_version, 98, 1, 5)
   line(0, 7, 127, 7, 6)
   
-  -- Display Numérico
+  -- Display Numérico Principal
   rectfill(4, 11, 123, 31, c_display)
   rect(3, 10, 124, 32, 7)
   
@@ -145,7 +252,7 @@ function _draw()
   local x_dis = 120 - (#v_pantalla * 4)
   if x_dis < 8 then x_dis = 8 end
   
-  poke(0x5f58, 0x11) -- Fuente Gigante Nativa
+  poke(0x5f58, 0x11) -- Texto Gigante Nativo
   print(v_pantalla, x_dis, 20, c_txt_dis)
   poke(0x5f58, 0x00) 
   
@@ -153,8 +260,8 @@ function _draw()
   if modo_actual == 1 then txt_modo = "MODO: CIENTIFICO" end
   print(txt_modo, 5, 35, 6)
   
-  -- Renderizado de Botonera
-  local botonera_activa = (modo_actual == 0) and pad_estandar or pad_cientifico
+  -- Renderizado de Botoneras Base
+  local botonera_activa = (modo_actual == 1) and pad_cientifico or pad_estandar
   local inicio_x, inicio_y = 4, 43
   local b_ancho, b_alto, espacio = 22, 12, 2
   
@@ -167,7 +274,7 @@ function _draw()
     local by = inicio_y + grid_y * (b_alto + espacio)
     
     if grid_x == cx and grid_y == cy then
-      rectfill(bx, by, bx + b_ancho, by + b_alto, 10) -- Selector Verde Brillante
+      rectfill(bx, by, bx + b_ancho, by + b_alto, 10) 
       rect(bx, by, bx + b_ancho, by + b_alto, 7)
       local tx = bx + (b_ancho - (#txt * 4)) / 2 + 1
       print(txt, tx, by + 4, 0)
@@ -201,7 +308,6 @@ function render_ranita_xtree(x, y)
 end
 
 function procesar_entrada(btn_data)
-  -- SOLUCIÓN DIRECTA: Extraer los datos reales de la sub-tabla del botón
   local txt = btn_data[1]  
   local tipo = btn_data[2] 
   sfx(3)
@@ -219,8 +325,7 @@ function procesar_entrada(btn_data)
     end
     return
   elseif txt == "RET" then
-    modo_actual = 0
-    cx = 0 cy = 0
+    modo_actual = 0 cx = 0 cy = 0
     return
   elseif txt == "+/-" then
     if v_pantalla != "0" and v_pantalla != "error" then
@@ -235,23 +340,22 @@ function procesar_entrada(btn_data)
     return
   end
 
-  -- GESTIÓN DE NÚMEROS (REPARADO)
+  -- GESTIÓN DE NÚMEROS
   if tipo == 0 then
     local digito = txt
     if txt == "PI" then digito = tostr(3.1416)
     elseif txt == "E" then digito = tostr(2.7182) end
     
-    -- CORRECCIÓN PRINCIPAL: limpiar_pantalla debe ir primero para romper el 44 y recibir el 9
     if limpiar_pantalla or v_pantalla == "0" or v_pantalla == "error" then
       v_pantalla = digito
-      limpiar_pantalla = false -- se apaga para que puedas escribir números largos (ej: 99)
+      limpiar_pantalla = false 
     else
       if #v_pantalla < 10 then v_pantalla = v_pantalla..digito end
     end
     return
   end
 
-  -- OPERADORES BINARIOS
+  -- OPERADORES BINARIOS BÁSICOS
   if tipo == 1 then
     n1 = tonum(v_pantalla) or 0
     op = txt
@@ -261,56 +365,44 @@ function procesar_entrada(btn_data)
     return
   end
 
-  -- PROCESAMIENTO DEL BOTÓN IGUAL (REPARACIÓN TOTAL)
+  -- PROCESAMIENTO DEL BOTÓN IGUAL
   if txt == "=" then
-    if op == "" then return end -- Si no hay operador guardado, no hace nada
-    
-    n2 = tonum(v_pantalla) or 0 -- Captura el segundo número (Ej: 9)
+    if op == "" then return end
+    n2 = tonum(v_pantalla) or 0
     local res = 0
     
-    -- Ejecución estricta de la operación matemática
     if op == "+" then res = n1 + n2
     elseif op == "-" then res = n1 - n2
     elseif op == "*" then res = n1 * n2
     elseif op == "/" then 
-      if n2 == 0 then 
-        v_pantalla = "error" 
-        op = "" 
-        return 
-      else 
-        res = n1 / n2 
-      end
+      if n2 == 0 then v_pantalla = "error" op = "" return else res = n1 / n2 end
     elseif op == "^" then res = n1 ^ n2
-    elseif op == "MOD" then res = n1 % n2 
-    end
+    elseif op == "MOD" then res = n1 % n2 end
     
-    -- Actualización de la interfaz
-    v_historial = tostr(n1)..op..tostr(n2).."=" -- Muestra en chiquito: 44*9=
-    v_pantalla = ajustar_resultado(res)        -- Muestra el resultado real (396)
-    
-    -- Reseteo total de variables para la siguiente operación
+    v_historial = tostr(n1)..op..tostr(n2).."="
+    v_pantalla = ajustar_resultado(res)
     op = ""
-    n1 = res -- Permite seguir operando sobre el resultado obtenido
-    limpiar_pantalla = true -- El próximo número que toques borrará el resultado
+    n1 = res
+    limpiar_pantalla = true
     return
   end
 
-  -- OPERACIONES CIENTÍFICAS UNARIAS
+  -- OPERACIONES CIENTÍFICAS
   if tipo == 3 then
     local val = tonum(v_pantalla) or 0
     local res = 0
     v_historial = txt.."("..tostr(val)..")"
-
+    
     if txt == "^" or txt == "MOD" then
       n1 = tonum(v_pantalla) or 0
       op = txt
       v_historial = tostr(n1).." "..op
       limpiar_pantalla = true
       tiene_punto = false
-      modo_actual = 0 -- Te regresa al teclado normal automáticamente para escribir N2
+      modo_actual = 0 
       return
     end
-    
+
     if txt == "SIN" then res = sin(val / 360) 
     elseif txt == "COS" then res = cos(val / 360)
     elseif txt == "TAN" then 
