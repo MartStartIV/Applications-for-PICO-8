@@ -2,14 +2,14 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.04]
+-- CALCULATOR XTREE FORCE [v0.05]
 -- PARTE 1: CORE DE INICIALIZACIÓN Y CONFIGURACIÓN DE GRIDS
 -- =========================================================
 
 function _init()
   -- Información del Sistema
   id_nombre = "XTREE FORCE"
-  id_version = "V0.04"
+  id_version = "V0.05"
   
   -- Modos de Ejecución (0: Estándar, 1: Científico, 2: Acerca de, 3: Historial)
   modo_actual = 0 
@@ -41,7 +41,14 @@ function _init()
     {5, 0, 9, 1, 10},   -- 7: Toxic Waste
     {0, 2, 12, 4, 7},   -- 8: Deep Ocean
     {15, 14, 8, 9, 7},  -- 9: Sunset Peach
-    {0, 4, 10, 5, 7}    -- 10: Matrix Terminal
+    {0, 4, 10, 5, 7},   -- 10: Matrix Terminal
+    {3, 11, 3, 1, 11},  -- 11: Classic GameBoy (Muted Greens)
+    {0, 12, 7, 13, 12}, -- 12: Synthwave Dream (Purple & Cyan)
+    {0, 8, 14, 2, 8},   -- 13: Magma Chamber (Dark Red & Gold)
+    {15, 4, 14, 0, 7},  -- 14: Blueprint Tech (Industrial Blue)
+    {1, 5, 6, 2, 14},   -- 15: Frozen Tundra (Arctic Chill)
+    {0, 9, 10, 4, 9},   -- 16: Radioactive (Lime & Carbon)
+    {2, 13, 7, 14, 2}   -- 17: Pastel Sorbet (Soft Violet)
   }
   idx_tema = 1
   
@@ -60,25 +67,36 @@ function _init()
   hist_lista = {}            
   hist_idx = 1               
   
-  -- Validación estricta para evitar bucles corruptos en el arranque
-  if hist_total == nil or hist_total < 0 or hist_total > 5 then
+  -- Validación estricta para evitar lecturas corruptas de archivos viejos (Máximo 20)
+  if hist_total == nil or hist_total < 0 or hist_total > 20 then
     hist_total = 0
     dset(2, 0)
   end
   
-  -- Reconstruir historial guardado en la RAM de manera segura
+  -- Reconstruir historial de texto de forma segura (Iniciando desde la ranura 20)
+  -- Al mover el inicio a la ranura 20, nos alejamos por completo de ops_totales y dget(10)
   if hist_total > 0 then
     for i=1, hist_total do
-      local val_ram = dget(9 + i)
-      if val_ram and val_ram != 0 then
-        local s_val = tostr(val_ram)
-        if #s_val > 10 then s_val = sub(s_val, 1, 10) end
-        add(hist_lista, s_val)
+      local base_registro = 20 + (i - 1) * 15
+      local longitud_str = dget(base_registro) or 0
+      
+      -- Filtro de seguridad: un registro válido de XTREE FORCE mide entre 1 y 14 caracteres
+      if longitud_str > 0 and longitud_str <= 14 then
+        local string_reconstruido = ""
+        for j=1, longitud_str do
+          local caracter_ascii = dget(base_registro + j) or 32
+          string_reconstruido = string_reconstruido..chr(caracter_ascii)
+        end
+        add(hist_lista, string_reconstruido)
       end
     end
+    -- Sincronización real basada únicamente en los textos decodificados con éxito
     hist_total = #hist_lista
     dset(2, hist_total)
   end
+
+  -- Nueva variable para controlar el desplazamiento visual de la lista
+  hist_scroll = 0
   
   -- ESTRUCTURA DEL TECLADO DINÁMICO (Grid Adaptativo 4x5 Pulido)
   pad_estandar = {
@@ -145,14 +163,21 @@ function _init()
   scroll_velocidad = 0.4 
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.04]
+-- CALCULATOR XTREE FORCE [v0.05]
 -- PARTE 2: LÓGICA DE ACTUALIZACIÓN, COMBOS Y REFRESH DE HORA
 -- =========================================================
 
 function _update60()
   ranita_anim = (ranita_anim + 1) % 60
   
-  if delay_historial > 0 then delay_historial = delay_historial - 1 end
+  if delay_historial > 0 then 
+    delay_historial = delay_historial - 1 
+    -- El escudo SOLO detiene el código si YA salimos a la calculadora (modo 0 o 1)
+    -- Si estamos dentro del historial (modo 3), no se activa y nos deja salir libremente
+    if modo_actual == 0 or modo_actual == 1 then
+      return
+    end
+  end
   
   -- LECTURA HORARIA EXTRAÍDA DE LA APP DE UTILERÍA
   local hrs = stat(93) or 0
@@ -164,13 +189,11 @@ function _update60()
   local ss = tostr(segs) if #ss < 2 then ss = "0"..ss end
   str_reloj = sh..":"..sm..":"..ss
   
-  -- COMBO 1: B (5) + FLECHA ARRIBA (2) -> Alternar modo Científico / Estándar
-  if btn(5) and btnp(2) then
-    if modo_actual != 2 and modo_actual != 3 then
-      modo_actual = (modo_actual == 0) and 1 or 0
-      cx = 0 cy = 0 limpiar_pantalla = true
-      sfx(0)
-    end
+  -- COMBO 1: B (5) + FLECHA ARRIBA (2) -> Alternar modo Científico / Estándar (Filtrado)
+  if btn(5) and btnp(2) and modo_actual != 2 and modo_actual != 3 then
+    modo_actual = (modo_actual == 0) and 1 or 0
+    cx = 0 cy = 0 limpiar_pantalla = true
+    sfx(0)
     return
   end
 
@@ -258,66 +281,82 @@ function _update60()
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.04]
+-- CALCULATOR XTREE FORCE [v0.05]
 -- PARTE 3: LÓGICA DE NAVEGACIÓN Y PROCESAMIENTO DEL HISTORIAL
 -- =========================================================
 
 function actualizar_interfaz_historial()
-  -- Liberar el cerrojo del botón B únicamente cuando el usuario suelta el botón físicamente
-  if bloqueo_b then
-    if not btn(5) then bloqueo_b = false end
-    return -- Omite lecturas este frame para proteger la interfaz
-  end
-
-  -- SALIDA CONFIGURADA CON BOTÓN B (5) SOLO: Regresa a la calculadora de forma segura
-  if btnp(5) and not btn(1) then
+  -- 1. PRIORIDAD ABSOLUTA DE SALIDA CON FLECHA DERECHA (1)
+  -- Se evalúa antes que cualquier otra cosa para garantizar que NUNCA te quedes atrapado
+  if btnp(1) then
     modo_actual = 0
+    delay_historial = 12 -- Activa el escudo protector en la calculadora
+    bloqueo_b = false    -- Resetea cualquier cerrojo de B
     sfx(0)
     return
   end
 
-  -- Navegación Vertical entre los elementos
+  -- 2. DETECCIÓN PRIORITARIA DEL COMBO DE BORRADO (B + Arriba)
+  if btn(5) and btn(2) then
+    hist_lista = {}
+    hist_total = 0
+    dset(2, 0) 
+    for i=1, 20 do dset(9 + i, 0) end 
+    hist_idx = 1
+    hist_scroll = 0
+    bloqueo_b = true -- Evita salir de golpe al soltar el combo
+    delay_historial = 5
+    sfx(2)
+    return
+  end
+
+  -- 3. Liberar el cerrojo del botón B únicamente cuando el usuario suelta el botón físicamente
+  if bloqueo_b then
+    if not btn(5) then bloqueo_b = false end
+    return -- Omite lecturas de navegación/carga este frame para proteger la interfaz
+  end
+
+  -- 4. Navegación Vertical entre los elementos con cálculo de scroll automático
   if #hist_lista > 0 then
-    if btnp(2) then -- Flecha Arriba
+    if btnp(2) and not btn(5) then -- Flecha Arriba (Solo si no mantienes B)
       hist_idx = hist_idx - 1
-      if hist_idx < 1 then hist_idx = #hist_lista end
+      if hist_idx < 1 then 
+        hist_idx = #hist_lista 
+        hist_scroll = max(0, #hist_lista - 5)
+      elseif hist_idx < hist_scroll + 1 then
+        hist_scroll = hist_idx - 1
+      end
       sfx(3)
       return
     end
     if btnp(3) then -- Flecha Abajo
       hist_idx = hist_idx + 1
-      if hist_idx > #hist_lista then hist_idx = 1 end
+      if hist_idx > #hist_lista then 
+        hist_idx = 1 
+        hist_scroll = 0
+      elseif hist_idx > hist_scroll + 5 then
+        hist_scroll = hist_idx - 5
+      end
       sfx(3)
       return
     end
 
-    -- CARGA DE DATOS COMPLETA REPARADA: Ejecución directa con Botón A (4) solo
+    -- CONFIRMAR OPERACIÓN: Ejecución directa con Botón A (4) solo (Carga Segura)
     if btnp(4) and not btn(5) then
       v_pantalla = hist_lista[hist_idx]
+      v_historial = "" 
       
-      -- Escaneo estricto de punto decimal para evitar bugs operacionales
       tiene_punto = false
       for i=1, #v_pantalla do
         if sub(v_pantalla, i, i) == "." then tiene_punto = true end
       end
       
-      limpiar_pantalla = false
-      modo_actual = 0 -- Inyecta el valor completo y reactiva la botonera
+      limpiar_pantalla = true 
+      modo_actual = 0
+      delay_historial = 12 -- Activa el escudo protector en la calculadora
       sfx(2)
       return
     end
-  end
-
-  -- COMBO DE BORRADO SEGURO BASADO EN B: MANTENER B (5) + PULSAR FLECHA DERECHA (1)
-  if btn(5) and btnp(1) then
-    hist_lista = {}
-    hist_total = 0
-    dset(2, 0) 
-    for i=1, 5 do dset(9 + i, 0) end 
-    hist_idx = 1
-    bloqueo_b = true -- Evita salir de golpe al soltar el borrado
-    sfx(2)
-    return
   end
 end
 
@@ -330,17 +369,27 @@ end
 
 function extrude_historial(s_val, n_val)
   add(hist_lista, s_val, 1)
-  if #hist_lista > 5 then
+  if #hist_lista > 20 then
     del(hist_lista, hist_lista[#hist_lista])
   end
   hist_total = #hist_lista
   dset(2, hist_total)
+  
+  -- Guardado persistente alineado a partir de la ranura 20
   for i=1, hist_total do
-    dset(9 + i, tonum(hist_lista[i]) or 0)
+    local str = hist_lista[i]
+    local base_registro = 20 + (i - 1) * 15
+    
+    dset(base_registro, #str)
+    
+    for j=1, #str do
+      local caracter_ascii = ord(sub(str, j, j))
+      dset(base_registro + j, caracter_ascii)
+    end
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.04]
+-- CALCULATOR XTREE FORCE [v0.05]
 -- PARTE 4: MOTOR GRÁFICO AISLADO Y MÓDULO RENDER
 -- =========================================================
 
@@ -376,7 +425,7 @@ function _draw()
     return 
   end
 
-  -- AISLAMIENTO TOTAL 2: Pantalla de Historial Adaptativa al Tema (¡Ranita reincorporada!)
+  -- AISLAMIENTO TOTAL 2: Pantalla de Historial Adaptativa al Tema (Con Scroll Dinámico)
   if modo_actual == 3 then
     cls(c_fondo)
     
@@ -390,8 +439,10 @@ function _draw()
     if #hist_lista == 0 then
       print("historial vacio", 32, 54, c_btn_txt)
     else
-      for i=1, #hist_lista do
-        local ly = 22 + (i - 1) * 15
+      -- Renderiza solo los elementos visibles basados en la ventana de scroll (máximo 5)
+      for i = hist_scroll + 1, min(#hist_lista, hist_scroll + 5) do
+        local renglon = i - hist_scroll
+        local ly = 22 + (renglon - 1) * 15
         if i == hist_idx then
           rectfill(6, ly - 2, 121, ly + 8, c_btn_bse)
           print("-> "..hist_lista[i], 10, ly, c_btn_txt)
@@ -403,8 +454,8 @@ function _draw()
     
     rectfill(0, 102, 127, 127, 0)
     line(0, 102, 127, 102, 6)
-    print("\x8b\x91:elije (a):cargar valor", 4, 106, 7)
-    print("pulsar (b):salir | mant. (b)+der:borrar", 4, 115, 5)
+    print("\x8b\x91:elije (\x94):volver cal", 4, 106, 7)
+    print("pulsar (a):cargar | mant. (b)+arr:borrar", 4, 115, 5)
     print("ops:"..ops_totales, 94, 106, 10)
     
     -- Forzar renderizado de la ranita en las coordenadas correctas del marco inferior
@@ -476,7 +527,7 @@ function _draw()
   render_ranita_xtree(ranita_x, ranita_y)
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.04]
+-- CALCULATOR XTREE FORCE [v0.05]
 -- PARTE 5: CONTROL EMOCIONAL Y DIBUJO DE LA MASCOTA
 -- =========================================================
 
@@ -517,8 +568,8 @@ function render_ranita_xtree(x, y)
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.04]
--- PARTE 6: PROCESADOR MATEMÁTICO Y PARSEO DE ENTRADA
+-- CALCULATOR XTREE FORCE [v0.05]
+-- PARTE 6: PROCESADOR MATEMÁTICO Y PARSEO DE ENTRADA (REPARADO)
 -- =========================================================
 
 function procesar_entrada(btn_data)
@@ -632,8 +683,13 @@ function procesar_entrada(btn_data)
     elseif txt == "TAN" then 
       local c = cos(val / 360)
       if c == 0 then v_pantalla = "error" return else res = sin(val / 360) / c end
-    elseif txt == "ASN" then res = asin(val) * 360
-    elseif txt == "ACS" then res = acos(val) * 360
+    -- PARSEO SEGURO DE FUNCIONES AUSENTES EN API PICO-8 NATIVA
+    elseif txt == "ASN" then 
+      if val < -1 or val > 1 then v_pantalla = "error" return end
+      res = atan2(sqrt(1 - val * val), val) * 360
+    elseif txt == "ACS" then 
+      if val < -1 or val > 1 then v_pantalla = "error" return end
+      res = atan2(val, sqrt(1 - val * val)) * 360
     elseif txt == "ATN" then res = atan2(1, val) * 360
     elseif txt == "PI2" then res = 3.1416 * 3.1416
     elseif txt == "RND" then res = rnd(flr(val) > 0 and flr(val) or 100)
@@ -642,7 +698,7 @@ function procesar_entrada(btn_data)
     elseif txt == "LN" then 
       if val <= 0 then v_pantalla = "error" return else res = log(val) end
     elseif txt == "LOG" then 
-      if val <= 0 then v_pantalla = "error" return else res = log10(val) end
+      if val <= 0 then v_pantalla = "error" return else res = log(val) / log(10) end
     -----------------------------------------------------
     elseif txt == "EXP" then res = exp(val)
     elseif txt == "ABS" then res = abs(val)
@@ -656,8 +712,14 @@ function procesar_entrada(btn_data)
     
     v_pantalla = ajustar_resultado(res)
     
+    -- REGISTRO CIENTÍFICO EXTENDIDO: Guarda la fórmula + el resultado de forma visible
     if v_pantalla != "error" then
-      registrar_en_historial(v_pantalla)
+      local operacion_completa = v_historial.."="..v_pantalla
+      -- Si el texto es muy largo para el display, lo acortamos de forma segura a 14 caracteres
+      if #operacion_completa > 14 then 
+        operacion_completa = v_historial.."="..sub(v_pantalla, 1, 5)
+      end
+      registrar_en_historial(operacion_completa)
     end
     
     limpiar_pantalla = true
