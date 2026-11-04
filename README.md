@@ -19,7 +19,7 @@
 <!-- APP CARD START -->
 <div>
   <!-- APP HEADER -->
-  <h3>🧮 Calculator Xtree <kbd>V0.04</kbd></h3>
+  <h3>🧮 Calculator Xtree <kbd>V0.05</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -51,7 +51,7 @@
     <li><strong>B + Up Arrow:</strong> Switch between Standard Mode and Advanced Scientific Mode. The on-screen indicator will change automatically. (<code>MODE: STANDARD / MODE: SCIENTIFIC</code>).</li>
     <li><strong>B + Right Arrow:</strong> Switch instantly between 5 high-fidelity Cyberpunk color themes, redrawing the entire interface in a flash.</li>
     <li><strong>B + Left Arrow:</strong> Enable or disable the cinematic "About" screen, which triggers an automatic scroll displaying development details, features, and the app version.</li>
-    <li><strong>B + Down Arrow:</strong> Access the history of calculations performed in the calculator (an experimental feature in version 0.04 for now)</li>
+    <li><strong>B + Down Arrow:</strong> To clear the history, use the B button + the up arrow; navigate through the history using the up and down arrows; confirm the loading of a history entry with the A button; and exit the history using the right arrow.</li>
     <li><strong>A + Right Arrow:</strong> Perform a Quick Clear All. This clears the main display (0), erases the operation history from the sub-display, and resets internal variables to safely start a calculation from scratch.</li>
   </ul>
 
@@ -61,7 +61,15 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.04 (current version)</h4>
+    <h4>Version 0.05 (current version)</h4>
+    <ul>
+      <li>The history capacity has been increased to 8 entries, with plans to expand it further. :)</li>
+      <li>The number of compatible themes has been increased to 17.</li>
+      <li>Several bugs from the previous version have been fixed, including: History clearing: You can now reset the calculator's records (while in the "CALCULATION HISTORY" section, press the B button + Up arrow), Loading results: Confirm a history entry to load its result using the A button, Navigation: Use the Right arrow to exit the history, and the Up/Down arrows to move through the entries.</li>
+      <li>Various visual glitches have been corrected.</li>
+      <li>Work is still underway to resolve remaining issues in the scientific mode (specifically regarding the LOG function).</li>
+    </ul>
+    <h4>Version 0.04</h4>
     <ul>
       <li>A history system for past calculations is now available. You can access it by pressing the 'B' button + the Down directional button.</li>
       <li>This new feature allows you to record your calculations. Please note that the current storage capacity is very limited, which may lead to some compatibility issues (this will be addressed in future updates).</li>
