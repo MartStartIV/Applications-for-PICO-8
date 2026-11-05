@@ -28,7 +28,7 @@
 
   <!-- IMAGE GALLERY WITH VISIBLE SUBTITLES -->
   <h4>📸 Screenshots</h4>
-  <table width="100%">
+<table width="100%">
     <tr>
       <td align="center" width="33.3%">
         <img src="assets/screenshot1.jpg" alt="Calculator Xtree Standard Mode" width="100%">
@@ -44,12 +44,17 @@
       </td>
     </tr>
     <tr align="center">
+      <td width="33.3%"></td>
+      
       <td align="center" width="33.3%">
         <img src="assets/screenshot4.jpg" alt="Calculator Xtree Calculation History" width="100%">
         <br><sub><b>Calculation History</b></sub>
       </td>
+      
+      <td width="33.3%"></td>
     </tr>
   </table>
+
 
   <!-- SHORTCUTS SECTION -->
   <h4>⌨️ Additional Functions & Key Shortcuts</h4>
