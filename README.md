@@ -42,6 +42,8 @@
         <img src="assets/screenshot3.jpg" alt="Calculator Xtree Cyberpunk Themes" width="100%">
         <br><sub><b>Cyberpunk Themes</b></sub>
       </td>
+    </tr>
+    <tr>
       <td align="center" width="33.3%">
         <img src="assets/screenshot4.jpg" alt="Calculator Xtree Calculation History" width="100%">
         <br><sub><b>Calculation History</b></sub>
