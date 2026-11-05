@@ -2,14 +2,14 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.05]
+-- CALCULATOR XTREE FORCE [v0.06]
 -- PARTE 1: CORE DE INICIALIZACIÓN Y CONFIGURACIÓN DE GRIDS
 -- =========================================================
 
 function _init()
   -- Información del Sistema
   id_nombre = "XTREE FORCE"
-  id_version = "V0.05"
+  id_version = "V0.06"
   
   -- Modos de Ejecución (0: Estándar, 1: Científico, 2: Acerca de, 3: Historial)
   modo_actual = 0 
@@ -52,8 +52,13 @@ function _init()
   }
   idx_tema = 1
   
-  -- SISTEMA DE PERSISTENCIA EXTENDIDO
+  -- SISTEMA DE PERSISTENCIA EXTENDIDO NATIVO
   cartdata("xtree_force_calc")
+  
+  -- Diccionario de compresión de 4 bits para ahorrar espacio físico (Máx 15 símbolos)
+  -- Permite meter 8 caracteres por cada ranura de PICO-8
+  comp_dict = {"0","1","2","3","4","5","6","7","8","9",".","-","+","*","/",
+               "=","^","M","O","D","S","I","N","C","A","T","G","L","E","X","P","R","V","(",")"}
   
   -- Carga del Tema Seguro
   local tema_guardado = dget(0)
@@ -67,36 +72,48 @@ function _init()
   hist_lista = {}            
   hist_idx = 1               
   
-  -- Validación estricta para evitar lecturas corruptas de archivos viejos (Máximo 20)
-  if hist_total == nil or hist_total < 0 or hist_total > 20 then
+  -- Validación de seguridad adaptada al límite físico real comprimido (Máximo 30)
+  if hist_total == nil or hist_total < 0 or hist_total > 30 then
     hist_total = 0
     dset(2, 0)
   end
   
-  -- Reconstruir historial de texto de forma segura (Iniciando desde la ranura 20)
-  -- Al mover el inicio a la ranura 20, nos alejamos por completo de ops_totales y dget(10)
+  -- Descompresión y reconstrucción del historial desde las 64 ranuras físicas
   if hist_total > 0 then
-    for i=1, hist_total do
-      local base_registro = 20 + (i - 1) * 15
-      local longitud_str = dget(base_registro) or 0
+    for i=1, min(hist_total, 30) do
+      local base_registro = 3 + (i - 1) * 2
+      local r1 = dget(base_registro) or 0
+      local r2 = dget(base_registro + 1) or 0
       
-      -- Filtro de seguridad: un registro válido de XTREE FORCE mide entre 1 y 14 caracteres
-      if longitud_str > 0 and longitud_str <= 14 then
-        local string_reconstruido = ""
-        for j=1, longitud_str do
-          local caracter_ascii = dget(base_registro + j) or 32
-          string_reconstruido = string_reconstruido..chr(caracter_ascii)
-        end
+      local string_reconstruido = ""
+      
+      -- Desempaquetamos r1 (Primeros 8 caracteres de 4 bits)
+      local temp1 = r1
+      for j=1, 8 do
+        local nibble = temp1 % 16
+        if nibble > 0 and comp_dict[nibble] then string_reconstruido = string_reconstruido..comp_dict[nibble] end
+        temp1 = flr(temp1 / 16)
+      end
+      
+      -- Desempaquetamos r2 (Siguientes 8 caracteres de 4 bits)
+      local temp2 = r2
+      for j=1, 8 do
+        local nibble = temp2 % 16
+        if nibble > 0 and comp_dict[nibble] then string_reconstruido = string_reconstruido..comp_dict[nibble] end
+        temp2 = flr(temp2 / 16)
+      end
+      
+      if #string_reconstruido > 0 then
         add(hist_lista, string_reconstruido)
       end
     end
-    -- Sincronización real basada únicamente en los textos decodificados con éxito
     hist_total = #hist_lista
     dset(2, hist_total)
   end
 
   -- Nueva variable para controlar el desplazamiento visual de la lista
   hist_scroll = 0
+
   
   -- ESTRUCTURA DEL TECLADO DINÁMICO (Grid Adaptativo 4x5 Pulido)
   pad_estandar = {
@@ -163,7 +180,7 @@ function _init()
   scroll_velocidad = 0.4 
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.05]
+-- CALCULATOR XTREE FORCE [v0.06]
 -- PARTE 2: LÓGICA DE ACTUALIZACIÓN, COMBOS Y REFRESH DE HORA
 -- =========================================================
 
@@ -281,7 +298,7 @@ function _update60()
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.05]
+-- CALCULATOR XTREE FORCE [v0.06]
 -- PARTE 3: LÓGICA DE NAVEGACIÓN Y PROCESAMIENTO DEL HISTORIAL
 -- =========================================================
 
@@ -300,11 +317,22 @@ function actualizar_interfaz_historial()
   if btn(5) and btn(2) then
     hist_lista = {}
     hist_total = 0
-    dset(2, 0) 
-    for i=1, 20 do dset(9 + i, 0) end 
+    ops_totales = 0 -- Resetea las operaciones para que la ranita vuelva a la normalidad
+    
+    dset(1, 0) -- Guarda el reseteo de la ranita en el archivo
+    dset(2, 0) -- Guarda el total de historial en cero
+    
+    -- Limpia las 60 ranuras de registros con ceros para vaciar el archivo físico
+    for i=3, 63 do
+      dset(i, 0)
+    end
+    
+    -- Conserva la configuración de tu tema intacta en la ranura 0
+    dset(0, idx_tema)
+    
     hist_idx = 1
     hist_scroll = 0
-    bloqueo_b = true -- Evita salir de golpe al soltar el combo
+    bloqueo_b = true 
     delay_historial = 5
     sfx(2)
     return
@@ -369,27 +397,55 @@ end
 
 function extrude_historial(s_val, n_val)
   add(hist_lista, s_val, 1)
-  if #hist_lista > 20 then
+  if #hist_lista > 30 then
     del(hist_lista, hist_lista[#hist_lista])
   end
   hist_total = #hist_lista
+  guardar_memoria_fisica() 
+end
+
+function guardar_memoria_fisica()
+  dset(0, idx_tema)
+  dset(1, ops_totales)
   dset(2, hist_total)
   
-  -- Guardado persistente alineado a partir de la ranura 20
-  for i=1, hist_total do
+  -- Guardamos hasta 30 elementos usando únicamente 2 ranuras por registro
+  for i=1, min(#hist_lista, 30) do
     local str = hist_lista[i]
-    local base_registro = 20 + (i - 1) * 15
+    local base_registro = 3 + (i - 1) * 2
     
-    dset(base_registro, #str)
+    local r1 = 0
+    local r2 = 0
     
-    for j=1, #str do
-      local caracter_ascii = ord(sub(str, j, j))
-      dset(base_registro + j, caracter_ascii)
+    -- Empaquetamos los primeros 8 caracteres en r1
+    for j=1, min(#str, 8) do
+      local char = sub(str, j, j)
+      local idx_char = 0
+      for k=1, #comp_dict do
+        if comp_dict[k] == char then idx_char = k break end
+      end
+      r1 = r1 + idx_char * (16 ^ (j - 1))
     end
+    
+    -- Empaquetamos los siguientes caracteres en r2
+    if #str > 8 then
+      for j=9, min(#str, 16) do
+        local char = sub(str, j, j)
+        local idx_char = 0
+        for k=1, #comp_dict do
+          if comp_dict[k] == char then idx_char = k break end
+        end
+        r2 = r2 + idx_char * (16 ^ (j - 9))
+      end
+    end
+    
+    dset(base_registro, r1)
+    dset(base_registro + 1, r2)
   end
 end
+
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.05]
+-- CALCULATOR XTREE FORCE [v0.06]
 -- PARTE 4: MOTOR GRÁFICO AISLADO Y MÓDULO RENDER
 -- =========================================================
 
@@ -527,7 +583,7 @@ function _draw()
   render_ranita_xtree(ranita_x, ranita_y)
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.05]
+-- CALCULATOR XTREE FORCE [v0.06]
 -- PARTE 5: CONTROL EMOCIONAL Y DIBUJO DE LA MASCOTA
 -- =========================================================
 
@@ -568,7 +624,7 @@ function render_ranita_xtree(x, y)
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.05]
+-- CALCULATOR XTREE FORCE [v0.06]
 -- PARTE 6: PROCESADOR MATEMÁTICO Y PARSEO DE ENTRADA (REPARADO)
 -- =========================================================
 
