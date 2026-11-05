@@ -19,7 +19,7 @@
 <!-- APP CARD START -->
 <div>
   <!-- APP HEADER -->
-  <h3>🧮 Calculator Xtree <kbd>V0.05</kbd></h3>
+  <h3>🧮 Calculator Xtree <kbd>V0.06</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -39,8 +39,12 @@
         <br><sub><b>Scientific Mode</b></sub>
       </td>
       <td align="center" width="33.3%">
-        <img src="assets/screenshot3.jpg" alt="Calculator Xtree Cyberpunk Theme" width="100%">
+        <img src="assets/screenshot3.jpg" alt="Calculator Xtree Cyberpunk Themes" width="100%">
         <br><sub><b>Cyberpunk Themes</b></sub>
+      </td>
+      <td align="center" width="33.3%">
+        <img src="assets/screenshot4.jpg" alt="Calculator Xtree Calculation History" width="100%">
+        <br><sub><b>Calculation History</b></sub>
       </td>
     </tr>
   </table>
@@ -61,7 +65,13 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.05 (current version)</h4>
+    <h4>Version 0.06 (current version)</h4>
+    <ul>
+      <li>The history clearing system has been fixed, as has the little frog animation :)</li>
+      <li>An issue with the log entries has been resolved; the history now holds 30 entries before older ones begin to be replaced as new calculations are added.</li>
+      <li>Some minor bugs have been fixed</li>
+    </ul>
+    <h4>Version 0.05</h4>
     <ul>
       <li>The history capacity has been increased to 8 entries, with plans to expand it further. :)</li>
       <li>The number of compatible themes has been increased to 17.</li>
