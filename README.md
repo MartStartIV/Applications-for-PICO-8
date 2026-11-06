@@ -19,7 +19,7 @@
 <!-- APP CARD START -->
 <div>
   <!-- APP HEADER -->
-  <h3>🧮 Calculator Xtree <kbd>V0.06</kbd></h3>
+  <h3>🧮 Calculator Xtree <kbd>V0.07</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -69,7 +69,15 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.06 (current version)</h4>
+    <h4>Version 0.07 (current version)</h4>
+    <ul>
+      <li>Fixed some minor issues in the calculator.</li>
+      <li>The little frog will blow you occasional kisses while you use the calculator.</li>
+      <li>Added more emotions for the little frog.</li>
+      <li>If you clear your history too frequently, the little frog will get sad the reason being that it thinks you don’t want to keep a record of your calculations (at least, that’s the angle I took, or one way of looking at it).</li>
+      <li>Indicator for the name of the selected theme.</li>
+    </ul>
+    <h4>Version 0.06</h4>
     <ul>
       <li>The history clearing system has been fixed, as has the little frog animation :)</li>
       <li>An issue with the log entries has been resolved; the history now holds 30 entries before older ones begin to be replaced as new calculations are added.</li>
