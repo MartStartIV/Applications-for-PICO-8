@@ -2,14 +2,14 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.06]
+-- CALCULATOR XTREE FORCE [v0.07]
 -- PARTE 1: CORE DE INICIALIZACIÓN Y CONFIGURACIÓN DE GRIDS
 -- =========================================================
 
 function _init()
   -- Información del Sistema
   id_nombre = "XTREE FORCE"
-  id_version = "V0.06"
+  id_version = "V0.07"
   
   -- Modos de Ejecución (0: Estándar, 1: Científico, 2: Acerca de, 3: Historial)
   modo_actual = 0 
@@ -51,6 +51,19 @@ function _init()
     {2, 13, 7, 14, 2}   -- 17: Pastel Sorbet (Soft Violet)
   }
   idx_tema = 1
+
+  -- Nombres de los temas (Mantener el mismo orden que la lista de temas)
+  nombres_temas = {
+    "neon midnight", "cyber punk", "choco mint", "forest mist", 
+    "light retro", "blood vapor", "toxic waste", "deep ocean", 
+    "sunset peach", "matrix term", "classic gb", "synthwave", 
+    "magma chamb", "blueprint", "frozen tund", "radioactive", "pastel sorb"
+  }
+
+  -- control de tiempo para los besos de la ranita (60 fps = 1 segundo)
+  cronometro_beso = 0
+  tiempo_proximo_beso = 5400 -- 5400 frames = 1 minuto y medio (primer beso)
+  estado_beso = 0            -- 0: normal, >0: animando el beso y corazón
   
   -- SISTEMA DE PERSISTENCIA EXTENDIDO NATIVO
   cartdata("xtree_force_calc")
@@ -67,10 +80,11 @@ function _init()
   end
   
   -- Carga de Estadísticas de la Ranita y Estructura del Historial
-  ops_totales = dget(1) or 0 
+  ops_totales = dget(1) or 0
   hist_total = dget(2) or 0  
   hist_lista = {}            
-  hist_idx = 1               
+  hist_idx = 1
+            
   
   -- Validación de seguridad adaptada al límite físico real comprimido (Máximo 30)
   if hist_total == nil or hist_total < 0 or hist_total > 30 then
@@ -111,6 +125,8 @@ function _init()
     dset(2, hist_total)
   end
 
+  reg_desde_borrado = 10 
+  borrados_seguidos = 0
   -- Nueva variable para controlar el desplazamiento visual de la lista
   hist_scroll = 0
 
@@ -180,12 +196,23 @@ function _init()
   scroll_velocidad = 0.4 
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.06]
+-- CALCULATOR XTREE FORCE [v0.07]
 -- PARTE 2: LÓGICA DE ACTUALIZACIÓN, COMBOS Y REFRESH DE HORA
 -- =========================================================
 
 function _update60()
   ranita_anim = (ranita_anim + 1) % 60
+  
+  -- actualizar tiempos de la ranita (añadir al inicio de _update60)
+  cronometro_beso = cronometro_beso + 1
+  if cronometro_beso >= tiempo_proximo_beso then
+    cronometro_beso = 0
+    estado_beso = 90 -- el beso y el corazón durarán 90 frames en pantalla (1.5 segundos)
+    -- calcular aleatorio para el próximo beso (entre 2 y 3 minutos: 7200 a 10800 frames)
+    tiempo_proximo_beso = 7200 + flr(rnd(3600))
+  end
+  if estado_beso > 0 then estado_beso = estado_beso - 1 end
+
   
   if delay_historial > 0 then 
     delay_historial = delay_historial - 1 
@@ -298,7 +325,7 @@ function _update60()
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.06]
+-- CALCULATOR XTREE FORCE [v0.07]
 -- PARTE 3: LÓGICA DE NAVEGACIÓN Y PROCESAMIENTO DEL HISTORIAL
 -- =========================================================
 
@@ -317,10 +344,26 @@ function actualizar_interfaz_historial()
   if btn(5) and btn(2) then
     hist_lista = {}
     hist_total = 0
-    ops_totales = 0 -- Resetea las operaciones para que la ranita vuelva a la normalidad
     
-    dset(1, 0) -- Guarda el reseteo de la ranita en el archivo
-    dset(2, 0) -- Guarda el total de historial en cero
+    -- evaluar penalización por borrado rápido
+    if reg_desde_borrado < 10 then
+      borrados_seguidos = borrados_seguidos + 1
+    else
+      borrados_seguidos = 1
+    end
+    
+    -- si se borra 3 veces seguidas sin superar 10 registros
+    if borrados_seguidos >= 3 then
+      ops_totales = -10 -- <-- cambiamos de -1 a -10
+      borrados_seguidos = 0
+    else
+      ops_totales = 0
+    end
+    
+    reg_desde_borrado = 0 -- resetea el contador para el próximo ciclo
+    
+    dset(1, ops_totales) -- Guarda el estado de la ranita en el archivo
+    dset(2, 0)           -- Guarda el total de historial en cero
     
     -- Limpia las 60 ranuras de registros con ceros para vaciar el archivo físico
     for i=3, 63 do
@@ -391,9 +434,21 @@ end
 function registrar_en_historial(str_resultado)
   local n_val = tonum(str_resultado) or 0
   extrude_historial(str_resultado, n_val)
+  
+  -- subida aritmética real y progresiva paso a paso
   ops_totales = ops_totales + 1
+  
+  -- condición de liberación: si logró subir del -1 al 0
+  if ops_totales == 0 and borrados_seguidos >= 3 then
+    borrados_seguidos = 0 -- limpia los castigos anteriores de raíz
+  end
+  
+  -- sumamos al contador de registros entre borrados normales
+  reg_desde_borrado = reg_desde_borrado + 1
+  
   dset(1, ops_totales) 
 end
+
 
 function extrude_historial(s_val, n_val)
   add(hist_lista, s_val, 1)
@@ -445,7 +500,7 @@ function guardar_memoria_fisica()
 end
 
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.06]
+-- CALCULATOR XTREE FORCE [v0.07]
 -- PARTE 4: MOTOR GRÁFICO AISLADO Y MÓDULO RENDER
 -- =========================================================
 
@@ -510,8 +565,8 @@ function _draw()
     
     rectfill(0, 102, 127, 127, 0)
     line(0, 102, 127, 102, 6)
-    print("\x8b\x91:choose (\x94):return cal", 4, 106, 7)
-    print("press A: load | press b+up:delete", 4, 115, 5)
+    print("\x8b\x91:choose (\x94):return", 4, 106, 7)
+    print("press A: load | Press B+Up: delete", 4, 115, 5)
     print("ops:"..ops_totales, 94, 106, 10)
     
     -- Forzar renderizado de la ranita en las coordenadas correctas del marco inferior
@@ -549,6 +604,14 @@ function _draw()
   if modo_actual == 1 then txt_modo = "MODE: SCIENTIFIC" end
   print(txt_modo, 5, 35, 6)
   
+  -- nombre del tema en la esquina inferior izquierda (con color de alto contraste)
+  if nombres_temas[idx_tema] then
+    -- si el color de fondo es blanco o muy claro (como el tema 5), usamos texto negro (0), si no, blanco (7)
+    local col_nombre_tema = (c_fondo == 15 or c_fondo == 7) and 0 or 7
+    print("Theme: "..nombres_temas[idx_tema], 4, 118, col_nombre_tema)
+  end
+  
+  
   -- Renderizado de Botoneras Base
   local botonera_activa = (modo_actual == 1) and pad_cientifico or pad_estandar
   local inicio_x, inicio_y = 4, 43
@@ -583,48 +646,105 @@ function _draw()
   render_ranita_xtree(ranita_x, ranita_y)
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.06]
+-- CALCULATOR XTREE FORCE [v0.07]
 -- PARTE 5: CONTROL EMOCIONAL Y DIBUJO DE LA MASCOTA
 -- =========================================================
 
 function render_ranita_xtree(x, y)
-  local offset_y = (ranita_anim < 30) and 0 or 1
+  -- FPS mejorados: oscilación senoidal suave (renderizado orgánico de alta fluidez)
+  local offset_y = flr(sin(ranita_anim / 60) * 1.8)
   local ry = y + offset_y
   
   local color_cuerpo = 11 
   local color_borde = 3   
   local color_boca = 8    
   
+  -- adaptaciones de color basadas en tus temas anteriores
   local color_adaptativo = temas[idx_tema][3]
-  
-  -- DETECCIÓN EVOLUTIVA DE EMOCIONES
   if ops_totales >= 150 then
     color_cuerpo = color_adaptativo
     color_borde = temas[idx_tema][4] 
   end
   
-  -- DIBUJO DEL CUERPO
+  -- 1. DIBUJO BASE DEL CUERPO
   rectfill(x, ry + 2, x + 10, ry + 10, color_borde)    
   rectfill(x + 1, ry + 3, x + 9, ry + 10, color_cuerpo) 
   
-  -- DIBUJO DE LOS OJOS
-  rectfill(x, ry, x + 2, ry + 2, color_borde)
-  rectfill(x + 8, ry, x + 10, ry + 2, color_borde)
-  rectfill(x + 1, ry + 1, x + 2, ry + 2, 7)  
-  rectfill(x + 8, ry + 1, x + 9, ry + 2, 7)
-  pset(x + 1, ry + 2, 0) pset(x + 9, ry + 2, 0)
+  -- 2. MOTOR DINÁMICO DE EMOCIONES (DIBUJO DE OJOS Y ACCESORIOS)
+  if ops_totales < 0 then
+    -- ESTADO: TRISTE (Ojos caídos llorosos y sin brillo)
+    rectfill(x, ry + 1, x + 2, ry + 2, color_borde)
+    rectfill(x + 8, ry + 1, x + 10, ry + 2, color_borde)
+    pset(x + 1, ry + 2, 12) pset(x + 9, ry + 2, 12) -- Lágrima/Brillo tenue azulado
+    
+  elseif estado_beso > 0 then
+    -- ESTADO: TIRADOR DE BESOS (Ojos felices cerrados en arco de amor "^ ^")
+    pset(x, ry + 2, color_borde) pset(x + 2, ry + 2, color_borde) pset(x + 1, ry + 1, color_borde)
+    pset(x + 8, ry + 2, color_borde) pset(x + 10, ry + 2, color_borde) pset(x + 9, ry + 1, color_borde)
+    
+    -- Efecto de corazón flotante (Se eleva con el tiempo de la animación)
+    local cor_x = x - 6 - flr(estado_beso / 15) % 4
+    local cor_y = ry - 4 + flr(estado_beso / 8)
+    if cor_y > ry - 14 then
+      -- Mini corazón de 3x3 píxeles (Rojo escarlata)
+      pset(cor_x + 1, cor_y, 8) pset(cor_x, cor_y + 1, 8) 
+      pset(cor_x + 2, cor_y + 1, 8) pset(cor_x + 1, cor_y + 2, 8)
+    end
+    
+  elseif ops_totales >= 250 then
+    -- ESTADO: LENTES DE SOL (Estilo Hacker Cyberpunk / Pro)
+    rectfill(x - 1, ry + 1, x + 4, ry + 3, 0) -- Lente izquierdo
+    rectfill(x + 6, ry + 1, x + 11, ry + 3, 0) -- Lente derecho
+    line(x + 3, ry + 1, x + 7, ry + 1, 0)      -- Puente de las gafas
+    pset(x, ry + 2, 7) pset(x + 7, ry + 2, 7)  -- Reflejo blanco en las gafas
+    
+  elseif ops_totales >= 100 and ops_totales < 150 then
+    -- ESTADO: GUIÑO DE OJO (Ojo izquierdo normal, derecho guiñando "-")
+    rectfill(x, ry, x + 2, ry + 2, color_borde)
+    rectfill(x + 1, ry + 1, x + 2, ry + 2, 7) pset(x + 1, ry + 2, 0) -- Izquierdo normal
+    line(x + 8, ry + 2, x + 10, ry + 2, color_borde)                 -- Derecho cerrado
+    
+  else
+    -- ESTADO: NORMAL / ANIMADO / ENÉRGICO (Ojos estándar abiertos)
+    rectfill(x, ry, x + 2, ry + 2, color_borde)
+    rectfill(x + 8, ry, x + 10, ry + 2, color_borde)
+    rectfill(x + 1, ry + 1, x + 2, ry + 2, 7)  
+    rectfill(x + 8, ry + 1, x + 9, ry + 2, 7)
+    pset(x + 1, ry + 2, 0) pset(x + 9, ry + 2, 0)
+  end
   
-  -- GESTIÓN DINÁMICA DE LA BOCA (Expresión Emocional)
-  if ops_totales >= 30 then
+    -- 3. GESTIÓN DINÁMICA DE LA BOCA Y EXPRESIÓN COMPLEMENTARIA
+  if ops_totales < 0 then
+    -- Boca triste (Arco invertido hacia abajo)
+    pset(x + 3, ry + 8, color_boca)
+    rectfill(x + 4, ry + 7, x + 6, ry + 7, color_boca)
+    pset(x + 7, ry + 8, color_boca)
+    
+  elseif estado_beso > 0 then
+    -- Boca de beso ("Chu" / Corazón pequeño pegado a la boca)
+    rectfill(x + 4, ry + 7, x + 5, ry + 7, 8)
+    pset(x + 3, ry + 7, 7) -- Brillo del beso
+    
+  elseif ops_totales >= 150 then
+    -- Estado Enérgico: Sonrisa gigante abierta mostrando felicidad extrema
+    rectfill(x + 3, ry + 6, x + 7, ry + 8, color_borde)
+    rectfill(x + 4, ry + 7, x + 6, ry + 8, 7) -- Dientes / Interior de la boca
+    
+  elseif ops_totales >= 30 and ops_totales < 150 then
+    -- Estado Animado: Sonrisa estándar alegre
     pset(x + 3, ry + 7, color_boca)
     rectfill(x + 4, ry + 8, x + 6, ry + 8, color_boca)
     pset(x + 7, ry + 7, color_boca)
+    
   else
+    -- Estado Base: Línea de expresión neutral
     rectfill(x + 3, ry + 6, x + 7, ry + 7, 8)
   end
 end
+
+
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.06]
+-- CALCULATOR XTREE FORCE [v0.07]
 -- PARTE 6: PROCESADOR MATEMÁTICO Y PARSEO DE ENTRADA (REPARADO)
 -- =========================================================
 
