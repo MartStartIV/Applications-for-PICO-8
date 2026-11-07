@@ -63,6 +63,66 @@
     <li><strong>A + Right Arrow:</strong> Perform a Quick Clear All. This clears the main display (0), erases the operation history from the sub-display, and resets internal variables to safely start a calculation from scratch.</li>
   </ul>
 
+<!-- APP CARD START: ADD NOTES XTREE -->
+<div>
+  <!-- APP HEADER -->
+  <h3>📝 Add Notes Xtree <kbd>V0.01</kbd></h3>
+  
+  <!-- APP DESCRIPTION -->
+  <p>
+    <strong>Add Notes Xtree</strong> is a versatile note-taking utility engineered for PICO-8. This stable initial release allows you to save and manage quick notes directly on your retro handheld console running the <code>picante8_libretro.so</code> core. It features custom save-state retention, a built-in multilingual system, and an adaptive user interface tailored for retro environments.
+  </p>
+
+  <!-- IMAGE GALLERY WITH VISIBLE SUBTITLES -->
+  <h4>📸 Screenshots</h4>
+  <table width="100%">
+    <tr>
+      <td align="center" width="33.3%">
+        <img src="assets/screenshot5.jpg" alt="Language Selection Screen" width="100%">
+        <br><sub><b>Language Selection</b></sub>
+      </td>
+      <td align="center" width="33.3%">
+        <img src="assets/screenshot6.jpg" alt="Main Note Interface" width="100%">
+        <br><sub><b>Main Interface</b></sub>
+      </td>
+      <td align="center" width="33.3%">
+        <img src="assets/screenshot7.jpg" alt="Virtual Keyboard Layout" width="100%">
+        <br><sub><b>Virtual Keyboard</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td width="33.3%"></td>
+      <td align="center" width="33.3%">
+        <img src="assets/screenshot8.jpg" alt="Custom Selected Theme" width="100%">
+        <br><sub><b>Selected Theme</b></sub>
+      </td>
+      <td width="33.3%"></td>
+    </tr>
+  </table>
+
+  <!-- KEY FEATURES SECTION -->
+  <h4>🌟 Core Features</h4>
+  <ul>
+    <li><strong>Note Management:</strong> Save up to 10 active notes simultaneously. Each note supports a maximum length of 120 characters due to system storage limitations (expandable in future updates).</li>
+    <li><strong>Native Multi-Language Support:</strong> The first PICO-8 utility to support multiple languages natively. Select your preferred language during the initial setup.</li>
+    <li><strong>Persistent Configuration:</strong> Language choices, interface settings, and your personal notes are saved automatically to memory and reloaded instantly upon booting the app.</li>
+    <li><strong>Interactive Mascot:</strong> The companion little frog reacts dynamically to your actions, expressing a variety of unique visual emotions as you use the application.</li>
+    <li><strong>RTC Clock Support:</strong> Seamless integration with the hardware Real-Time Clock (RTC) or software-simulated clock of your handheld console, displaying the time directly on the screen.</li>
+    <li><strong>Full Virtual Keyboard:</strong> Features an optimized, comprehensive digital keyboard containing letters, numbers, and special symbols, complete with custom spacing, trim, and deletion controls.</li>
+    <li><strong>Adaptive Themes:</strong> Instant customization with predefined color presets that redraw the entire interface automatically while supporting continuous auto-saving.</li>
+  </ul>
+
+  <!-- SHORTCUTS SECTION -->
+  <h4>⌨️ Additional Functions & Key Shortcuts</h4>
+  <ul>
+    <li><strong>A Button:</strong> Open the text input, create new notes, and confirm selections inside the virtual keyboard.</li>
+    <li><strong>B + Down Arrow:</strong> Instantly wipe and delete the currently selected note from your storage vault. There is no usage limit on clearing records! :)</li>
+    <li><strong>B + Left Arrow:</strong> Triggers the cinematic "About" screen to display development details, technical credits, and AI collaboration insights.</li>
+    <li><strong>B + Right Arrow:</strong> Quickly cycles through the preset aesthetic color themes, saving your preference automatically on the fly.</li>
+  </ul>
+</div>
+<!-- APP CARD END: ADD NOTES XTREE -->
+
   <br>
 
   <!-- CHANGELOG DROPDOWN (Native HTML Accordion) -->
@@ -126,6 +186,7 @@
   </details>
 </div>
 <!-- APP CARD END -->
+
 
 <br>
 <hr>
