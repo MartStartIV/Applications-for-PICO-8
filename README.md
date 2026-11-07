@@ -129,8 +129,7 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h3>📝 Add Notes Xtree Updates</h3>
-    <h4>Version 0.01 (Initial Stable Release)</h4>
+    <h4>Version 0.08 (Initial Stable Release 📝 Add Notes Xtree V0.01)</h4>
     <ul>
       <li>Launched the very first stable build of Add Notes Xtree!</li>
       <li>Implemented an automated configuration architecture that memorizes language configurations and notes on startup.</li>
