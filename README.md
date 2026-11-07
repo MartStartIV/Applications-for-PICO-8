@@ -129,6 +129,15 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
+    <h3>📝 Add Notes Xtree Updates</h3>
+    <h4>Version 0.01 (Initial Stable Release)</h4>
+    <ul>
+      <li>Launched the very first stable build of Add Notes Xtree!</li>
+      <li>Implemented an automated configuration architecture that memorizes language configurations and notes on startup.</li>
+      <li>Integrated full alphanumeric virtual keyboard with symbol sets and text editing controls.</li>
+      <li>Added adaptive multi-language framework and dynamic color themes.</li>
+      <li>Enabled real and simulated RTC clock tracking alongside emotional expressions for the mascot frog.</li>
+    </ul>
     <h4>Version 0.07 (current version)</h4>
     <ul>
       <li>Fixed some minor issues in the calculator.</li>
