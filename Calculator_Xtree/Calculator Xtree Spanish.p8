@@ -2,14 +2,14 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.07]
+-- CALCULATOR XTREE FORCE [v0.08]
 -- PARTE 1: CORE DE INICIALIZACIÓN Y CONFIGURACIÓN DE GRIDS
 -- =========================================================
 
 function _init()
   -- Información del Sistema
   id_nombre = "XTREE FORCE"
-  id_version = "V0.07"
+  id_version = "V0.08"
   
   -- Modos de Ejecución (0: Estándar, 1: Científico, 2: Acerca de, 3: Historial)
   modo_actual = 0 
@@ -154,6 +154,15 @@ function _init()
   
   -- Mascota Oficial (Ranita Xtree)
   ranita_x = 114 ranita_y = 114 ranita_anim = 0 
+
+  -- [MEJORA GATO] - VARIABLES DE CONTROL DE EVENTO Y MINIJUEGO
+  ani_gato_frames = 0   -- Contador de tiempo para la cinemática en el centro
+  gato_tablero = {}     -- Matriz de 3x3 (0: Vacío, 1: Usuario "X", 2: Ranita "O")
+  gato_cx = 0           -- Cursor X en el tablero del gato (0 a 2)
+  gato_cy = 0           -- Cursor Y en el tablero del gato (0 a 2)
+  gato_turno = 1        -- 1: Usuario, 2: Ranita IA
+  gato_estado = ""      -- "", "juzgando", "gana_user", "gana_ranita", "empate"
+  gato_cooldown_ia = 0  -- Retardo de frames para que la IA "piense" y no juegue instantáneo
   
   -- CONFIGURACIÓN DEL SCROLL "ACERCA DE"
   textos_acercade = {
@@ -194,14 +203,31 @@ function _init()
   scroll_y_inicio = 120 
   scroll_y = scroll_y_inicio
   scroll_velocidad = 0.4 
+
+  -- [MEJORA AUDIO DEFINITIVA] - CONTROL DE SONIDO DE INTERFAZ (Default: Apagado)
+  sonido_activo = false
+  
+  function tocar_sfx(id)
+    if sonido_activo then sfx(id) end
+  end
+
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.07]
+-- CALCULATOR XTREE FORCE [v0.08]
 -- PARTE 2: LÓGICA DE ACTUALIZACIÓN, COMBOS Y REFRESH DE HORA
 -- =========================================================
 
 function _update60()
   ranita_anim = (ranita_anim + 1) % 60
+
+  -- [MEJORA GATO] - CAPTURA DE MODOS DE JUEGO AISLADOS
+  if modo_actual == 4 then
+    actualizar_cinematica_beso()
+    return
+  elseif modo_actual == 5 then
+    actualizar_logica_gato()
+    return
+  end
   
   -- actualizar tiempos de la ranita (añadir al inicio de _update60)
   cronometro_beso = cronometro_beso + 1
@@ -232,6 +258,13 @@ function _update60()
   local sm = tostr(mnts) if #sm < 2 then sm = "0"..sm end
   local ss = tostr(segs) if #ss < 2 then ss = "0"..ss end
   str_reloj = sh..":"..sm..":"..ss
+  
+  -- COMBO AUDIO: A (4) + FLECHA ARRIBA (2) -> Activar/Desactivar Sonido Global
+  if btn(4) and btnp(2) and modo_actual != 2 and modo_actual != 3 and modo_actual != 4 and modo_actual != 5 then
+    sonido_activo = not sonido_activo
+    if sonido_activo then sfx(2) end -- Llama al nativo directo solo para este aviso
+    return
+  end
   
   -- COMBO 1: B (5) + FLECHA ARRIBA (2) -> Alternar modo Científico / Estándar (Filtrado)
   if btn(5) and btnp(2) and modo_actual != 2 and modo_actual != 3 then
@@ -325,7 +358,7 @@ function _update60()
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.07]
+-- CALCULATOR XTREE FORCE [v0.08]
 -- PARTE 3: LÓGICA DE NAVEGACIÓN Y PROCESAMIENTO DEL HISTORIAL
 -- =========================================================
 
@@ -437,9 +470,16 @@ function registrar_en_historial(str_resultado)
   
   -- subida aritmética real y progresiva paso a paso
   ops_totales = ops_totales + 1
+
+  -- [MEJORA GATO] - INTERCEPTOR DE OPERACIÓN 400
+  if ops_totales == 400 then
+    modo_actual = 4       -- Activamos Modo Cinemática del Beso Gigante
+    ani_gato_frames = 0   -- Reseteamos el reloj de la animación
+    estado_beso = 120     -- Forzamos la animación de la boca de beso por 2 segundos
+  end
   
   -- condición de liberación: si logró subir del -1 al 0
-  if ops_totales == 0 and borrados_seguidos >= 3 then
+  if ops_totales == 0 and borrados_seguidos >= 2 then
     borrados_seguidos = 0 -- limpia los castigos anteriores de raíz
   end
   
@@ -500,7 +540,7 @@ function guardar_memoria_fisica()
 end
 
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.07]
+-- CALCULATOR XTREE FORCE [v0.08]
 -- PARTE 4: MOTOR GRÁFICO AISLADO Y MÓDULO RENDER
 -- =========================================================
 
@@ -512,6 +552,15 @@ function _draw()
   local c_txt_dis = temas[idx_tema][3]
   local c_btn_bse = temas[idx_tema][4]
   local c_btn_txt = temas[idx_tema][5]
+
+  -- [MEJORA GATO] - INTERCEPTOR GRÁFICO PARA EL MINIJUEGO
+  if modo_actual == 4 then
+    render_cinematica_beso_central(c_fondo)
+    return
+  elseif modo_actual == 5 then
+    render_pantalla_gato(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+    return
+  end
   
   -- AISLAMIENTO TOTAL 1: Modo Acerca de
   if modo_actual == 2 then
@@ -580,6 +629,14 @@ function _draw()
   -- Header Superior
   rectfill(0, 0, 127, 7, 0)
   print(id_nombre.." "..id_version, 4, 1, 7)
+
+  -- [MEJORA AUDIO] Indica visualmente si el sonido está activo en el Top Bar
+  if sonido_activo then
+    print("\xbe", 84, 1, 11) -- Nota musical verde si está encendido
+  else
+    print("\xbe", 84, 1, 5)  -- Nota musical gris oscuro si está apagado
+  end
+  
   print(str_reloj, 94, 1, 5)
   line(0, 7, 127, 7, 6)
   
@@ -646,7 +703,7 @@ function _draw()
   render_ranita_xtree(ranita_x, ranita_y)
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.07]
+-- CALCULATOR XTREE FORCE [v0.08]
 -- PARTE 5: CONTROL EMOCIONAL Y DIBUJO DE LA MASCOTA
 -- =========================================================
 
@@ -744,14 +801,14 @@ end
 
 
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.07]
+-- CALCULATOR XTREE FORCE [v0.08]
 -- PARTE 6: PROCESADOR MATEMÁTICO Y PARSEO DE ENTRADA (REPARADO)
 -- =========================================================
 
 function procesar_entrada(btn_data)
   local txt = btn_data[1]  
   local tipo = btn_data[2] 
-  sfx(3)
+  tocar_sfx(3) -- [CAMBIO SEGURO] Reemplaza el viejo sfx(3) por la función puente
 
   if txt == "C" then
     v_pantalla = "0" v_historial = "" n1 = 0 n2 = 0 op = ""
@@ -909,4 +966,292 @@ function ajustar_resultado(valor)
   tiene_punto = false
   for i=1,#s do if sub(s,i,i) == "." then tiene_punto = true end end
   return s
+end
+
+-- [MEJORA GATO] - FUNCIÓN AISLADA PARA INICIAR EL MINIJUEGO
+function iniciar_gato_ranita()
+  gato_tablero = {
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0}
+  }
+  gato_cx = 1 gato_cy = 1 -- El cursor empieza en el centro
+  gato_turno = 1          -- Inicia el jugador humano
+  gato_estado = ""
+  gato_cooldown_ia = 0
+  modo_actual = 5         -- Saltamos al Estado 5: Pantalla Completa del Gato
+end
+
+-- [MEJORA GATO] - LOGICA DE LA CINEMATICA DEL BESO INTERMEDIO
+function actualizar_cinematica_beso()
+  ani_gato_frames = ani_gato_frames + 1
+  estado_beso = 90 -- Mantiene la ranita lanzando besos en el centro
+  
+  -- La animación central dura 120 frames (2 segundos a 60fps)
+  if ani_gato_frames >= 120 then
+    ops_totales = 401 -- FIJACIÓN SEGURA EN 401 PARA ROMPER EL BUCLE INFINITO
+    dset(1, ops_totales)
+    estado_beso = 0
+    iniciar_gato_ranita() -- Lanza el minijuego de forma directa
+  end
+end
+
+-- [MEJORA GATO] - CONTROL DE JUEGO Y MOVIMIENTO EN EL TABLERO DEL GATO
+function actualizar_logica_gato()
+  -- BOTÓN B: Permite salir del minijuego en cualquier momento y volver a la calculadora
+  if btnp(5) then
+    modo_actual = 0
+    sfx(0)
+    return
+  end
+
+  -- Si el juego ya terminó (ganó alguien o empate), cualquier pulsación de A reinicia una nueva partida
+  if gato_estado != "" and gato_estado != "juzgando" then
+    if btnp(4) then iniciar_gato_ranita() end
+    return
+  end
+
+  -- TURNO DEL USUARIO (gato_turno == 1)
+  if gato_turno == 1 then
+    if btnp(0) then gato_cx = (gato_cx - 1) % 3 sfx(3) end -- Izquierda
+    if btnp(1) then gato_cx = (gato_cx + 1) % 3 sfx(3) end -- Derecha
+    if btnp(2) then gato_cy = (gato_cy - 1) % 3 sfx(3) end -- Arriba
+    if btnp(3) then gato_cy = (gato_cy + 1) % 3 sfx(3) end -- Abajo
+
+    -- BOTÓN A: Confirmar jugada en casilla vacía
+    if btnp(4) then
+      if gato_tablero[gato_cy + 1][gato_cx + 1] == 0 then
+        gato_tablero[gato_cy + 1][gato_cx + 1] = 1 -- Registra la equis "X"
+        sfx(2)
+        gato_estado = "juzgando"
+        gato_turno = 2
+        gato_cooldown_ia = 30 -- La ranita esperará medio segundo antes de tirar para parecer natural
+      else
+        sfx(1) -- Sonido de error si intenta pulsar una casilla ocupada
+      end
+    end
+  
+  -- TURNO DE LA RANITA IA (gato_turno == 2)
+  elseif gato_turno == 2 then
+    if gato_estado == "juzgando" then
+      evaluar_estado_gato()
+      if gato_estado != "" then return end -- Si el usuario ganó con su tiro, se detiene
+      gato_estado = ""
+    end
+
+    if gato_cooldown_ia > 0 then
+      gato_cooldown_ia = gato_cooldown_ia - 1
+    else
+      ejecutar_movimiento_ia()
+      gato_estado = "juzgando"
+      gato_turno = 1
+    end
+  end
+  
+  -- Evaluación constante de fin de turno
+  if gato_estado == "juzgando" then
+    evaluar_estado_gato()
+    if gato_estado == "juzgando" then gato_estado = "" end
+  end
+end
+
+-- [MEJORA GATO] - INTELIGENCIA ARTIFICIAL MATEMÁTICA DE LA RANITA
+function ejecutar_movimiento_ia()
+  -- 1. Intentar ganar: Busca si a la ranita le falta una casilla para hacer 3 en línea
+  if procesar_bloqueo_o_ataque(2) then sfx(3) return end
+  
+  -- 2. Intentar bloquear: Busca si al usuario le falta una casilla para ganar y lo tapa
+  if procesar_bloqueo_o_ataque(1) then sfx(3) return end
+
+  -- 3. Prioridad estratégica: Tomar el centro si está libre
+  if gato_tablero[2][2] == 0 then
+    gato_tablero[2][2] = 2
+    sfx(3)
+    return
+  end
+
+  -- 4. Movimiento de respaldo: Buscar la primera casilla vacía disponible de forma secuencial
+  for y = 1, 3 do
+    for x = 1, 3 do
+      if gato_tablero[y][x] == 0 then
+        gato_tablero[y][x] = 2
+        sfx(3)
+        return
+      end
+    end
+  end
+end
+
+-- [MEJORA GATO] - REVISIÓN LOGICA DE CASILLAS PARA ATAQUE/DEFENSA DE LA IA
+function procesar_bloqueo_o_ataque(id_linea)
+  -- Comprobación de líneas horizontales
+  for y = 1, 3 do
+    local cuenta, vacio_x = 0, 0
+    for x = 1, 3 do
+      if gato_tablero[y][x] == id_linea then cuenta = cuenta + 1
+      elseif gato_tablero[y][x] == 0 then vacio_x = x end
+    end
+    if cuenta == 2 and vacio_x > 0 then gato_tablero[y][vacio_x] = 2 return true end
+  end
+
+  -- Comprobación de líneas verticales
+  for x = 1, 3 do
+    local cuenta, vacio_y = 0, 0
+    for y = 1, 3 do
+      if gato_tablero[y][x] == id_linea then cuenta = cuenta + 1
+      elseif gato_tablero[y][x] == 0 then vacio_y = y end
+    end
+    if cuenta == 2 and vacio_y > 0 then gato_tablero[vacio_y][x] = 2 return true end
+  end
+
+  -- Diagonal principal (\)
+  local c_d1, v_d1 = 0, 0
+  for i = 1, 3 do
+    if gato_tablero[i][i] == id_linea then c_d1 = c_d1 + 1
+    elseif gato_tablero[i][i] == 0 then v_d1 = i end
+  end
+  if c_d1 == 2 and v_d1 > 0 then gato_tablero[v_d1][v_d1] = 2 return true end
+
+  -- Diagonal inversa (/)
+  local c_d2, v_d2 = 0, 0
+  for i = 1, 3 do
+    if gato_tablero[i][4 - i] == id_linea then c_d2 = c_d2 + 1
+    elseif gato_tablero[i][4 - i] == 0 then v_d2 = i end
+  end
+  if c_d2 == 2 and v_d2 > 0 then gato_tablero[v_d2][4 - v_d2] = 2 return true end
+
+  return false
+end
+
+-- [MEJORA GATO] - ARBITRO DEL JUEGO: DETECTA VICTORIAS O EMPATES
+function evaluar_estado_gato()
+  -- Verificar filas y columnas simultáneamente
+  for i = 1, 3 do
+    if gato_tablero[i][1] != 0 and gato_tablero[i][1] == gato_tablero[i][2] and gato_tablero[i][1] == gato_tablero[i][3] then
+      gato_estado = (gato_tablero[i][1] == 1) and "gana_user" or "gana_ranita"
+      return
+    end
+    if gato_tablero[1][i] != 0 and gato_tablero[1][i] == gato_tablero[2][i] and gato_tablero[1][i] == gato_tablero[3][i] then
+      gato_estado = (gato_tablero[1][i] == 1) and "gana_user" or "gana_ranita"
+      return
+    end
+  end
+
+  -- Verificar diagonales
+  if gato_tablero[1][1] != 0 and gato_tablero[1][1] == gato_tablero[2][2] and gato_tablero[1][1] == gato_tablero[3][3] then
+    gato_estado = (gato_tablero[1][1] == 1) and "gana_user" or "gana_ranita"
+    return
+  end
+  if gato_tablero[1][3] != 0 and gato_tablero[1][3] == gato_tablero[2][2] and gato_tablero[1][3] == gato_tablero[3][1] then
+    gato_estado = (gato_tablero[1][3] == 1) and "gana_user" or "gana_ranita"
+    return
+  end
+
+  -- Si no hay ganador, verificar si el tablero se llenó por completo (Empate)
+  local llenas = 0
+  for y = 1, 3 do
+    for x = 1, 3 do
+      if gato_tablero[y][x] != 0 then llenas = llenas + 1 end
+    end
+  end
+  if llenas == 9 then gato_estado = "empate" end
+end
+
+-- [MEJORA GATO] - DIBUJO DE LA RANITA GIGANTE LANZANDO UN BESO (CENTRO DE PANTALLA)
+function render_cinematica_beso_central(c_fondo)
+  cls(c_fondo)
+  
+  -- Dibujamos un marco decorativo de felicitaciones
+  rect(2, 2, 125, 125, 10)
+  rectfill(4, 4, 123, 14, 0)
+  print("recompensa xtree!", 32, 7, 7)
+  
+  -- Escalamos la posición de la ranita a casi la mitad de la resolución (Centro)
+  local rx = 58
+  local ry = 54 + flr(sin(ranita_anim / 30) * 2) -- Oscilación un poco más rápida para denotar emoción
+  
+  -- Renderizamos la ranita usando el motor emocional que ya programaste en la Parte 5
+  -- Al estar en un frame intermedio, estado_beso > 0 pintará los ojos felices y la boca de beso
+  render_ranita_xtree(rx, ry)
+  
+  -- Mensaje emergente para el usuario
+  print("gracias por usar", 32, 94, 7)
+  print("la calculadora! <3", 28, 103, 11)
+end
+
+-- [MEJORA GATO] - DIBUJO DE LA INTERFAZ COMPLETA DEL GATO ADAPTADA AL TEMA
+function render_pantalla_gato(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+  cls(c_fondo)
+  
+  -- 1. Encabezado del Minijuego
+  rectfill(0, 0, 127, 13, c_display)
+  line(0, 13, 127, 13, c_btn_txt)
+  print("ranita gato ia", 38, 4, c_txt_dis)
+  
+  -- Indicador de Turno o Estado de Fin de Juego
+  if gato_estado == "gana_user" then
+    print("¡ganaste tu!", 40, 18, 11)
+  elseif gato_estado == "gana_ranita" then
+    print("ganó la ranita", 36, 18, 8)
+  elseif gato_estado == "empate" then
+    print("¡empate!", 48, 18, 5)
+  else
+    if gato_turno == 1 then
+      print("tu turno (x)", 42, 18, c_btn_txt)
+    else
+      print("pensando...", 44, 18, 6)
+    end
+  end
+
+  -- 2. Renderizado de las Líneas del Tablero ($3\times3$)
+  local ox, oy = 34, 32  -- Coordenadas de origen del tablero
+  local cs = 20          -- Tamaño de cada casilla (20x20 píxeles)
+  
+  -- Líneas de la cuadrícula usando el color de base del botón
+  line(ox + cs, oy, ox + cs, oy + cs * 3, c_btn_bse)
+  line(ox + cs * 2, oy, ox + cs * 2, oy + cs * 3, c_btn_bse)
+  line(ox, oy + cs, ox + cs * 3, oy + cs, c_btn_bse)
+  line(ox, oy + cs * 2, ox + cs * 3, oy + cs * 2, c_btn_bse)
+
+  -- 3. Dibujo de las Jugadas (X y O) y el Cursor de Selección
+  for y = 0, 2 do
+    for x = 0, 2 do
+      local bx = ox + x * cs
+      local by = oy + y * cs
+      local casilla = gato_tablero[y + 1][x + 1]
+      
+      -- Dibujar cursor parpadeante si es el turno del usuario sobre esa casilla
+      if x == gato_cx and y == gato_cy and gato_turno == 1 and gato_estado == "" then
+        if ranita_anim % 20 < 10 then
+          rect(bx + 2, by + 2, bx + cs - 2, by + cs - 2, 10)
+        end
+      end
+      
+      -- Renderizar las figuras
+      if casilla == 1 then
+        -- Dibujar Equis (X) en color de texto del display
+        line(bx + 5, by + 5, bx + cs - 5, by + cs - 5, c_txt_dis)
+        line(bx + cs - 5, by + 5, bx + 5, by + cs - 5, c_txt_dis)
+      elseif casilla == 2 then
+        -- Dibujar Círculo (O) en color adaptativo de la ranita (Color 11)
+        rect(bx + 5, by + 5, bx + cs - 5, by + cs - 5, 11)
+      end
+    end
+  end
+
+  -- 4. Barra de Estado Inferior y Controles
+  rectfill(0, 100, 127, 127, 0)
+  line(0, 100, 127, 100, 6)
+  
+  if gato_estado != "" and gato_estado != "juzgando" then
+    local c_p = (ranita_anim < 30) and 11 or 7
+    print("pulsar a: jugar de nuevo", 16, 105, c_p)
+    print("pulsar b: regresar a calc", 14, 115, 5)
+  else
+    print("\x8b\x91\x94\x83:moverse  (a):confirmar", 4, 105, 7)
+    print("pulsar b: salir a la calc", 14, 115, 5)
+  end
+
+  -- Pintamos a la ranita en la esquina del menú inferior manteniendo su estado emocional actual
+  render_ranita_xtree(114, 114)
 end
