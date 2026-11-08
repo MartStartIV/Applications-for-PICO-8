@@ -19,7 +19,7 @@
 <!-- APP CARD START -->
 <div>
   <!-- APP HEADER -->
-  <h3>🧮 Calculator Xtree <kbd>V0.07</kbd></h3>
+  <h3>🧮 Calculator Xtree <kbd>V0.08</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -129,6 +129,12 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
+    <h4>Version 0.09 (Calculator Xtree V0.08)</h4>
+    <ul>
+      <li>Some improvements have been made.</li>
+      <li>A minigame has been added: upon reaching 400 historical records, the little frog will invite you to play it’s up to you whether or not to join in.</li>
+      <li>The calculator application has been further stabilized.</li>
+    </ul>
     <h4>Version 0.08 (Initial Stable Release 📝 Add Notes Xtree V0.01)</h4>
     <ul>
       <li>Launched the very first stable build of Add Notes Xtree!</li>
