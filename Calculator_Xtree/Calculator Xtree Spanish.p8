@@ -2,14 +2,14 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.08]
+-- CALCULATOR XTREE FORCE [v0.09]
 -- PARTE 1: CORE DE INICIALIZACIÓN Y CONFIGURACIÓN DE GRIDS
 -- =========================================================
 
 function _init()
   -- Información del Sistema
   id_nombre = "XTREE FORCE"
-  id_version = "V0.08"
+  id_version = "V0.09"
   
   -- Modos de Ejecución (0: Estándar, 1: Científico, 2: Acerca de, 3: Historial)
   modo_actual = 0 
@@ -71,7 +71,7 @@ function _init()
   -- Diccionario de compresión de 4 bits para ahorrar espacio físico (Máx 15 símbolos)
   -- Permite meter 8 caracteres por cada ranura de PICO-8
   comp_dict = {"0","1","2","3","4","5","6","7","8","9",".","-","+","*","/",
-               "=","^","M","O","D","S","I","N","C","A","T","G","L","E","X","P","R","V","(",")"}
+               "=","^","M","O","D","S","I","N","C","A","T","G","L","E","X","P","R","V","(",")"," "}
   
   -- Carga del Tema Seguro
   local tema_guardado = dget(0)
@@ -92,33 +92,21 @@ function _init()
     dset(2, 0)
   end
   
-  -- Descompresión y reconstrucción del historial desde las 64 ranuras físicas
+  -- Carga Directa de Alta Precisión Decimal (Picante8-MIPS Safe)
   if hist_total > 0 then
     for i=1, min(hist_total, 30) do
       local base_registro = 3 + (i - 1) * 2
       local r1 = dget(base_registro) or 0
       local r2 = dget(base_registro + 1) or 0
       
-      local string_reconstruido = ""
-      
-      -- Desempaquetamos r1 (Primeros 8 caracteres de 4 bits)
-      local temp1 = r1
-      for j=1, 8 do
-        local nibble = temp1 % 16
-        if nibble > 0 and comp_dict[nibble] then string_reconstruido = string_reconstruido..comp_dict[nibble] end
-        temp1 = flr(temp1 / 16)
-      end
-      
-      -- Desempaquetamos r2 (Siguientes 8 caracteres de 4 bits)
-      local temp2 = r2
-      for j=1, 8 do
-        local nibble = temp2 % 16
-        if nibble > 0 and comp_dict[nibble] then string_reconstruido = string_reconstruido..comp_dict[nibble] end
-        temp2 = flr(temp2 / 16)
-      end
-      
-      if #string_reconstruido > 0 then
-        add(hist_lista, string_reconstruido)
+      -- Si r2 contiene nuestra marca especial (99), reconstruimos el decimal exacto
+      if r2 == 99 or r2 == -99 then
+        local signo = (r2 < 0) and -1 or 1
+        local valor_reconstruido = r1 * signo
+        add(hist_lista, ajustar_resultado(valor_reconstruido))
+      -- Si es un registro antiguo o vacío, no lo agrega para evitar basura visual
+      elseif r1 != 0 or r2 != 0 then
+        add(hist_lista, ajustar_resultado(r1))
       end
     end
     hist_total = #hist_lista
@@ -213,7 +201,7 @@ function _init()
 
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.08]
+-- CALCULATOR XTREE FORCE [v0.09]
 -- PARTE 2: LÓGICA DE ACTUALIZACIÓN, COMBOS Y REFRESH DE HORA
 -- =========================================================
 
@@ -358,7 +346,7 @@ function _update60()
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.08]
+-- CALCULATOR XTREE FORCE [v0.09]
 -- PARTE 3: LÓGICA DE NAVEGACIÓN Y PROCESAMIENTO DEL HISTORIAL
 -- =========================================================
 
@@ -504,43 +492,26 @@ function guardar_memoria_fisica()
   dset(1, ops_totales)
   dset(2, hist_total)
   
-  -- Guardamos hasta 30 elementos usando únicamente 2 ranuras por registro
+  -- Almacenamiento directo por multiplicación de precisión
   for i=1, min(#hist_lista, 30) do
     local str = hist_lista[i]
     local base_registro = 3 + (i - 1) * 2
     
-    local r1 = 0
-    local r2 = 0
+    local val_num = tonum(str) or 0
     
-    -- Empaquetamos los primeros 8 caracteres en r1
-    for j=1, min(#str, 8) do
-      local char = sub(str, j, j)
-      local idx_char = 0
-      for k=1, #comp_dict do
-        if comp_dict[k] == char then idx_char = k break end
-      end
-      r1 = r1 + idx_char * (16 ^ (j - 1))
-    end
+    -- Separamos el signo para proteger el bit de peso en procesadores MIPS
+    local signo_control = (val_num < 0) and -99 or 99
+    local val_absoluto = abs(val_num)
     
-    -- Empaquetamos los siguientes caracteres en r2
-    if #str > 8 then
-      for j=9, min(#str, 16) do
-        local char = sub(str, j, j)
-        local idx_char = 0
-        for k=1, #comp_dict do
-          if comp_dict[k] == char then idx_char = k break end
-        end
-        r2 = r2 + idx_char * (16 ^ (j - 9))
-      end
-    end
-    
-    dset(base_registro, r1)
-    dset(base_registro + 1, r2)
+    dset(base_registro, val_absoluto)   -- Guarda el número completo con decimales reales nativos
+    dset(base_registro + 1, signo_control) -- Guarda el signo y activa la bandera de lectura segura
   end
 end
 
+
+
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.08]
+-- CALCULATOR XTREE FORCE [v0.09]
 -- PARTE 4: MOTOR GRÁFICO AISLADO Y MÓDULO RENDER
 -- =========================================================
 
@@ -703,7 +674,7 @@ function _draw()
   render_ranita_xtree(ranita_x, ranita_y)
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.08]
+-- CALCULATOR XTREE FORCE [v0.09]
 -- PARTE 5: CONTROL EMOCIONAL Y DIBUJO DE LA MASCOTA
 -- =========================================================
 
@@ -801,7 +772,7 @@ end
 
 
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.08]
+-- CALCULATOR XTREE FORCE [v0.09]
 -- PARTE 6: PROCESADOR MATEMÁTICO Y PARSEO DE ENTRADA (REPARADO)
 -- =========================================================
 
@@ -945,16 +916,10 @@ function procesar_entrada(btn_data)
     
     v_pantalla = ajustar_resultado(res)
     
-    -- REGISTRO CIENTÍFICO EXTENDIDO: Guarda la fórmula + el resultado de forma visible
+    -- REGISTRO CIENTÍFICO OPTIMIZADO: Guarda directamente el resultado de interés intacto
     if v_pantalla != "error" then
-      local operacion_completa = v_historial.."="..v_pantalla
-      -- Si el texto es muy largo para el display, lo acortamos de forma segura a 14 caracteres
-      if #operacion_completa > 14 then 
-        operacion_completa = v_historial.."="..sub(v_pantalla, 1, 5)
-      end
-      registrar_en_historial(operacion_completa)
+      registrar_en_historial(v_pantalla)
     end
-    
     limpiar_pantalla = true
     return
   end
