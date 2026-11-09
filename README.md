@@ -19,7 +19,7 @@
 <!-- APP CARD START -->
 <div>
   <!-- APP HEADER -->
-  <h3>🧮 Calculator Xtree <kbd>V0.08</kbd></h3>
+  <h3>🧮 Calculator Xtree <kbd>V0.09</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
