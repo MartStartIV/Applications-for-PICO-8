@@ -129,6 +129,11 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
+    <h4>Version 0.10 (Calculator Xtree V0.09) - current version</h4>
+    <ul>
+      <li>A troublesome issue regarding the saving of data in the calculator's history has been resolved.</li>
+      <li>Some minor bugs have been fixed.</li>
+    </ul>
     <h4>Version 0.09 (Calculator Xtree V0.08)</h4>
     <ul>
       <li>Some improvements have been made.</li>
@@ -143,7 +148,7 @@
       <li>Added adaptive multi-language framework and dynamic color themes.</li>
       <li>Enabled real and simulated RTC clock tracking alongside emotional expressions for the mascot frog.</li>
     </ul>
-    <h4>Version 0.07 (current version)</h4>
+    <h4>Version 0.07</h4>
     <ul>
       <li>Fixed some minor issues in the calculator.</li>
       <li>The little frog will blow you occasional kisses while you use the calculator.</li>
