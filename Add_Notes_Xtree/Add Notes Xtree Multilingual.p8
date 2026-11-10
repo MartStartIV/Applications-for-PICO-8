@@ -2,13 +2,13 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v1.00]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.02]
 -- PARTE 1 DE 4: NÚCLEO DE INICIALIZACIÓN Y CONTROL DE FLUX
 -- =========================================================
 
 function _init()
   id_nombre = "ADD NOTES XTREE"
-  id_version = "V1.00"
+  id_version = "V0.02"
   
   -- MÁQUINA DE ESTADOS COMPATIBLE CON MIPS
   -- 0 = selector de idioma
@@ -27,7 +27,7 @@ function _init()
     "[","]","(",")","{","}","@",":","#","$","&","_",";"
   }
   
-  lista_idiomas = {"1. espanol", "2. english", "3. polski", "4. russian", "5. portugues", "6. italiano", "7. francais"}
+  lista_idiomas = {"1. espanol", "2. english", "3. polski", "4. russian", "5. portugues", "6. italiano", "7. francais", "8. nihongo (jp)", "9. zhongwen (cn)"}
   nombres_temas_notas = {"matrix", "neon mid", "cyber", "ocean", "magma", "forest", "steel"}
   
   textos_sistema = {
@@ -37,7 +37,9 @@ function _init()
     {"vibor yazika:", "profil pola:", "muzhchina", "zhenshina", "n/a", "zametki:", "sozdat?", "smotret", "pravka", "udalit", "pusto", "simvoli:", "shranit", "vihod", "o prg"},
     {"escolha idioma:", "perfil sexo:", "homem", "mulher", "n/a", "notas:", "criar nota?", "ver", "editar", "excluir", "vazio", "caracteres:", "salvar", "sair", "sobre"},
     {"scegli lingua:", "profilo sesso:", "uomo", "donna", "n/a", "note:", "crea nota?", "vedi", "modifica", "elimina", "vuoto", "caratteri:", "salva", "esci", "info"},
-    {"choisir langue:", "profil sexe:", "homme", "femme", "n/a", "notes:", "creer note?", "voir", "modifier", "effacer", "vide", "caracteres:", "garder", "sortir", "a propos"}
+    {"choisir langue:", "profil sexe:", "homme", "femme", "n/a", "notes:", "creer note?", "voir", "modifier", "effacer", "vide", "caracteres:", "garder", "sortir", "a propos"},
+    {"gengo sentaku:", "seibetsu:", "dansei", "josei", "sonota", "memo suu:", "sakusei?", "miru", "henshuu", "sakujo", "kara", "moji suu:", "hozon", "modoru", "jouhou"},
+    {"xuanze yuyan:", "xingbie:", "nanxing", "nvxing", "wuxiao", "biji shu:", "xinjian?", "chakan", "bianji", "shanchu", "kong", "zifu shu:", "baocun", "tuichu", "guanyu"}
   }
 
   -- Configuración de usuario por defecto
@@ -89,12 +91,18 @@ function _update()
     if ok then cargar_configuracion_inicial() end
   end
 
-  -- 2. Animación base e inteligencia emocional pasiva de la mascota
+  -- 2. Animación base e inteligencia emocional dinámica de la mascota
   ranita_anim = (ranita_anim + 1) % 60
   cronometro_emocion = cronometro_emocion + 1
-  if cronometro_emocion >= 1800 then 
+  -- Si el usuario presiona botones activos, la ranita reacciona y reinicia sueño
+  if btnp(0) or btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) then
+    if estado_emocional == 6 then estado_emocional = 4 cronometro_emocion = 0 end
+  end
+  if cronometro_emocion >= 900 then 
     cronometro_emocion = 0
-    estado_emocional = 1 + flr(rnd(4))
+    -- Si hay notas creadas habilita los 7 estilos (incluyendo corona y lentes)
+    local max_est = (#lista_notas > 0) and 7 or 6
+    estado_emocional = 1 + flr(rnd(max_est))
   end
 
   -- 3. Actualizador del reloj del sistema a prueba de nulos
@@ -128,8 +136,8 @@ function _update()
 
   -- 5. Procesador nativo de la máquina de estados con flancos discretos (btnp)
   if modo_actual == 0 then
-    if btnp(2) then cursor_idioma = cursor_idioma - 1 if cursor_idioma < 1 then cursor_idioma = 7 end end
-    if btnp(3) then cursor_idioma = cursor_idioma + 1 if cursor_idioma > 7 then cursor_idioma = 1 end end
+    if btnp(2) then cursor_idioma = cursor_idioma - 1 if cursor_idioma < 1 then cursor_idioma = 9 end end
+    if btnp(3) then cursor_idioma = cursor_idioma + 1 if cursor_idioma > 9 then cursor_idioma = 1 end end
     if btnp(4) then
       idioma_actual = cursor_idioma
       pcall(function() dset(0, idioma_actual) end)
@@ -157,7 +165,7 @@ function _update()
   end
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v1.00]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.02]
 -- PARTE 2 DE 4: DESPACHADOR DE COLOR Y SELECTORES INICIALES
 -- =========================================================
 
@@ -196,22 +204,23 @@ function render_selector_idioma()
   rect(2, 2, 125, 125, 5)
   rectfill(4, 4, 123, 14, 1)
   print("add notes xtree", 32, 7, 7)
-  print("elije tu idioma / select:", 14, 24, 6)
+  print("elije tu idioma / select:", 14, 21, 6)
   
-  -- Renderizado lineal directo compatible con arquitecturas portátiles
-  for i=1, 7 do
-    local ly = 36 + (i - 1) * 11
+  -- Renderizado lineal directo compatible con arquitecturas portátiles (9 idiomas)
+  for i=1, 9 do
+    local ly = 32 + (i - 1) * 9
     local texto_menu = lista_idiomas[i]
     
     if i == cursor_idioma then
-      rectfill(6, ly - 2, 121, ly + 8, 5)
+      rectfill(6, ly - 1, 121, ly + 6, 5)
       print("-> " .. texto_menu, 10, ly, 7)
     else
       print("   " .. texto_menu, 10, ly, 13)
     end
   end
-  print("press (a) to confirm", 24, 116, 11)
+  print("press (a) to confirm", 24, 117, 11)
 end
+
 
 function render_selector_perfil()
   cls(0)
@@ -237,7 +246,7 @@ function render_selector_perfil()
   print("(a): ok", 48, 112, 10)
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v1.00]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.02]
 -- PARTE 3 DE 4: MENÚ DE NOTAS Y MASCOTA CON EXPRESIONES
 -- =========================================================
 
@@ -294,7 +303,7 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   line(0, 11, 127, 11, c_btn_txt)
   
   -- Nombre de la aplicación actualizado con su versión fija
-  print("ADD NOTES XTREE V0.01", 4, 3, c_txt_dis)
+  print("ADD NOTES XTREE V0.02", 4, 3, c_txt_dis)
   print(str_reloj, 94, 3, 5)
 
   local t_lang = textos_sistema[idioma_actual][6]  -- "notas creadas:"
@@ -384,42 +393,102 @@ function render_ranita_completa(x, y)
   local color_borde = 3   
   local color_boca = 8    
   
+  -- Cuerpo base simétrico
   rectfill(x, ry + 2, x + 10, ry + 10, color_borde)
   rectfill(x + 1, ry + 3, x + 9, ry + 10, color_cuerpo)
   
   if estado_emocional == 1 then
-    -- [REPARACIÓN DE ASIMETRÍA]: Ojos completos perfectamente alineados en ambos lados
+    -- 1. NORMAL: Ojos completos perfectamente alineados
     rectfill(x, ry, x + 2, ry + 2, color_borde)
     rectfill(x + 8, ry, x + 10, ry + 2, color_borde)
-    
     rectfill(x + 1, ry + 1, x + 2, ry + 2, 7)
     rectfill(x + 8, ry + 1, x + 9, ry + 2, 7)
-    
     pset(x + 1, ry + 2, 0) 
     pset(x + 9, ry + 2, 0)
     rectfill(x + 3, ry + 7, x + 7, ry + 7, color_boca)
+
   elseif estado_emocional == 2 then
-    rectfill(x, ry + 1, x + 2, ry + 2, color_borde)
-    rectfill(x + 8, ry + 1, x + 10, ry + 2, color_borde)
-    pset(x + 1, ry + 2, 0) pset(x + 9, ry + 2, 0)
+    -- 2. PENSATIVA / CURIOSA: Mirando hacia arriba
+    rectfill(x, ry, x + 2, ry + 2, color_borde)
+    rectfill(x + 8, ry, x + 10, ry + 2, color_borde)
+    rectfill(x + 1, ry + 1, x + 2, ry + 2, 7)
+    rectfill(x + 8, ry + 1, x + 9, ry + 2, 7)
+    pset(x + 2, ry + 1, 0) 
+    pset(x + 9, ry + 1, 0)
     pset(x + 5, ry + 7, color_boca)
+
   elseif estado_emocional == 3 then
-    pset(x, ry + 2, color_borde) pset(x + 2, ry + 2, color_borde) pset(x + 1, ry + 1, color_borde)
-    pset(x + 8, ry + 2, color_borde) pset(x + 10, ry + 2, color_borde) pset(x + 9, ry + 1, color_borde)
+    -- 3. SORPRENDIDA: Ojos abiertos y boca abierta
+    rectfill(x, ry, x + 2, ry + 2, color_borde)
+    rectfill(x + 8, ry, x + 10, ry + 2, color_borde)
+    rectfill(x + 1, ry + 1, x + 2, ry + 2, 7)
+    rectfill(x + 8, ry + 1, x + 9, ry + 2, 7)
+    pset(x + 1, ry + 1, 0)
+    pset(x + 9, ry + 1, 0)
     rectfill(x + 3, ry + 6, x + 7, ry + 8, color_borde)
     rectfill(x + 4, ry + 7, x + 6, ry + 8, 7)
-  else
+
+  elseif estado_emocional == 4 then
+    -- 4. SONRIENTE (CORREGIDA): Ambos ojos simétricos + sonrisa feliz
     rectfill(x, ry, x + 2, ry + 2, color_borde)
-    rectfill(x + 1, ry + 1, x + 2, ry + 2, 7) pset(x + 1, ry + 2, 0)
-    line(x + 8, ry + 2, x + 10, ry + 2, color_borde)
+    rectfill(x + 8, ry, x + 10, ry + 2, color_borde)
+    rectfill(x + 1, ry + 1, x + 2, ry + 2, 7)
+    rectfill(x + 8, ry + 1, x + 9, ry + 2, 7)
+    pset(x + 1, ry + 2, 0)
+    pset(x + 9, ry + 2, 0)
+    pset(x + 3, ry + 7, color_boca)
+    rectfill(x + 4, ry + 8, x + 6, ry + 8, color_boca)
+    pset(x + 7, ry + 7, color_boca)
+
+  elseif estado_emocional == 5 then
+    -- 5. ESTILO COOL (Lentes oscuros + sonrisa)
+    rectfill(x, ry, x + 2, ry + 2, color_borde)
+    rectfill(x + 8, ry, x + 10, ry + 2, color_borde)
+    rectfill(x, ry + 1, x + 10, ry + 3, 0)
+    pset(x + 1, ry + 1, 7)
+    pset(x + 8, ry + 1, 7)
+    pset(x + 3, ry + 7, color_boca)
+    rectfill(x + 4, ry + 8, x + 6, ry + 8, color_boca)
+    pset(x + 7, ry + 7, color_boca)
+
+  elseif estado_emocional == 6 then
+    -- 6. DORMIDA: Ojos cerrados y "z" animada
+    rectfill(x, ry + 1, x + 2, ry + 2, color_borde)
+    rectfill(x + 8, ry + 1, x + 10, ry + 2, color_borde)
+    line(x, ry + 2, x + 2, ry + 2, 0)
+    line(x + 8, ry + 2, x + 10, ry + 2, 0)
+    pset(x + 5, ry + 7, color_boca)
+    if ranita_anim < 30 then
+      pset(x + 11, ry - 1, 7)
+      pset(x + 12, ry - 1, 7)
+      pset(x + 11, ry, 7)
+      pset(x + 12, ry, 7)
+    end
+
+  else
+    -- 7. ESTILO PRO / CORONA DORADA: Ojos simétricos + corona arriba
+    rectfill(x, ry, x + 2, ry + 2, color_borde)
+    rectfill(x + 8, ry, x + 10, ry + 2, color_borde)
+    rectfill(x + 1, ry + 1, x + 2, ry + 2, 7)
+    rectfill(x + 8, ry + 1, x + 9, ry + 2, 7)
+    pset(x + 1, ry + 2, 0)
+    pset(x + 9, ry + 2, 0)
+    -- Corona dorada (color 10) centrada sobre la cabeza
+    line(x + 3, ry + 1, x + 7, ry + 1, 10)
+    pset(x + 3, ry, 10)
+    pset(x + 5, ry - 1, 10)
+    pset(x + 7, ry, 10)
+    pset(x + 5, ry, 8)
+    -- Sonrisa
     pset(x + 3, ry + 7, color_boca)
     rectfill(x + 4, ry + 8, x + 6, ry + 8, color_boca)
     pset(x + 7, ry + 7, color_boca)
   end
 end
 
+
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v1.00]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.02]
 -- PARTE 4 DE 4: TECLADO, VISOR, ACERCA DE Y PERSISTENCIA
 -- =========================================================
 
@@ -652,6 +721,10 @@ function render_pantalla_acercade()
     t_ver = "versione:" t_dev = "sviluppatore:" t_ia = "ia colab:" t_mot = "motore:" t_nuc = "core:" t_sys = "sistema:" t_est = "stato: compatibile" t_atj = "--- scorciatoie ---" t_at1 = "b + su: info" t_at2 = "b + giu: elimina nota" t_at3 = "b + sin: crediti" t_at4 = "b + des: cambia tema" t_at5 = "l1: alterna abc/123" t_fin = "--- grazie per l'uso ---"
   elseif idioma_actual == 7 then -- Français
     t_ver = "version:" t_dev = "developpeur:" t_ia = "ia colab:" t_mot = "moteur:" t_nuc = "noyau:" t_sys = "systeme:" t_est = "statut: compatible" t_atj = "--- raccourcis ---" t_at1 = "b + haut: info" t_at2 = "b + bas: effacer note" t_at3 = "b + gauche: credits" t_at4 = "b + droite: changer theme" t_at5 = "l1: basculer abc/123" t_fin = "--- merci d'utiliser ---"
+  elseif idioma_actual == 8 then -- Nihongo (Romaji)
+    t_ver = "baajon:" t_dev = "kaihatsusha:" t_ia = "ai kyouryoku:" t_mot = "enjin:" t_nuc = "koa:" t_sys = "shisutemu:" t_est = "joutai: taiou" t_atj = "--- shoutokatto ---" t_at1 = "b + ue: jouhou" t_at2 = "b + shita: sakujo" t_at3 = "b + hidari: kurejitto" t_at4 = "b + migi: teema henkou" t_at5 = "l1: abc/123 kirikae" t_fin = "--- arigatou gozaimasu ---"
+  elseif idioma_actual == 9 then -- Zhongwen (Pinyin)
+    t_ver = "banben:" t_dev = "kaifazhe:" t_ia = "ai xiezuo:" t_mot = "yinqing:" t_nuc = "hexin:" t_sys = "xitong:" t_est = "zhuangtai: jianrong" t_atj = "--- kuaijiejian ---" t_at1 = "b + shang: xinxi" t_at2 = "b + xia: shanchu" t_at3 = "b + zuo: mingdan" t_at4 = "b + you: huan zhuti" t_at5 = "l1: qiehuan abc/123" t_fin = "--- ganxie shiyong ---"
   end
 
   -- Matriz lineal con los créditos extendidos ordenados secuencialmente
@@ -659,7 +732,7 @@ function render_pantalla_acercade()
     "--- " .. t_tit .. " ---",
     "",
     "app: add notes xtree",
-    t_ver .. " v0.01",
+    t_ver .. " v0.02",
     t_dev .. " martstartiv",
     t_ia .. " collaborative ai",
     "",
@@ -791,7 +864,7 @@ function cargar_configuracion_inicial()
     tema = dget(2) or 0
   end)
   
-  if lang >= 1 and lang <= 7 then
+  if lang >= 1 and lang <= 9 then
     idioma_actual = lang
     perfil_sexo = (sex >= 1 and sex <= 3) and sex or 3
     idx_tema = (tema >= 1 and tema <= 7) and tema or 1
