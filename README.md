@@ -66,7 +66,7 @@
 <!-- APP CARD START: ADD NOTES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>📝 Add Notes Xtree <kbd>V0.01</kbd></h3>
+  <h3>📝 Add Notes Xtree <kbd>V0.02</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -129,7 +129,14 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.10 (Calculator Xtree V0.09) - current version</h4>
+    <h4>Version 0.11 (Add Notes Xtree V0.02) - current version</h4>
+    <ul>
+      <li>Fixed some visual issues with the little frog.</li>
+      <li>Added two new languages ​​(Chinese and Japanese); these are implemented in a way that is fully supported by PICO-8 for now.</li>
+      <li>Added more styles for the little frog itself.</li>
+      <li>Resolved some identified issues.</li>
+    </ul>
+    <h4>Version 0.10 (Calculator Xtree V0.09)</h4>
     <ul>
       <li>A troublesome issue regarding the saving of data in the calculator's history has been resolved.</li>
       <li>Some minor bugs have been fixed.</li>
