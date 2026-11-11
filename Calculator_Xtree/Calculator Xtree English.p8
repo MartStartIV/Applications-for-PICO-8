@@ -2,14 +2,14 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.09]
+-- CALCULATOR XTREE FORCE [v0.10]
 -- PARTE 1: CORE DE INICIALIZACIÓN Y CONFIGURACIÓN DE GRIDS
 -- =========================================================
 
 function _init()
   -- Información del Sistema
   id_nombre = "XTREE FORCE"
-  id_version = "V0.09"
+  id_version = "V0.10"
   
   -- Modos de Ejecución (0: Estándar, 1: Científico, 2: Acerca de, 3: Historial)
   modo_actual = 0 
@@ -201,21 +201,12 @@ function _init()
 
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.09]
+-- CALCULATOR XTREE FORCE [v0.10]
 -- PARTE 2: LÓGICA DE ACTUALIZACIÓN, COMBOS Y REFRESH DE HORA
 -- =========================================================
 
 function _update60()
   ranita_anim = (ranita_anim + 1) % 60
-
-  -- [MEJORA GATO] - CAPTURA DE MODOS DE JUEGO AISLADOS
-  if modo_actual == 4 then
-    actualizar_cinematica_beso()
-    return
-  elseif modo_actual == 5 then
-    actualizar_logica_gato()
-    return
-  end
   
   -- actualizar tiempos de la ranita (añadir al inicio de _update60)
   cronometro_beso = cronometro_beso + 1
@@ -226,6 +217,21 @@ function _update60()
     tiempo_proximo_beso = 7200 + flr(rnd(3600))
   end
   if estado_beso > 0 then estado_beso = estado_beso - 1 end
+
+  -- 2. CAPTURA Y AISLAMIENTO DE LOS MODOS DE JUEGO
+  if modo_actual == 4 then
+    actualizar_cinematica_beso()
+    return
+  elseif modo_actual == 5 then
+    actualizar_logica_gato()
+    return
+  elseif modo_actual == 6 then 
+    actualizar_logica_naves() 
+    return
+  elseif modo_actual == 7 then 
+    actualizar_cinematica_beso_naves() 
+    return
+  end
 
   
   if delay_historial > 0 then 
@@ -346,7 +352,7 @@ function _update60()
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.09]
+-- CALCULATOR XTREE FORCE [v0.10]
 -- PARTE 3: LÓGICA DE NAVEGACIÓN Y PROCESAMIENTO DEL HISTORIAL
 -- =========================================================
 
@@ -456,24 +462,25 @@ function registrar_en_historial(str_resultado)
   local n_val = tonum(str_resultado) or 0
   extrude_historial(str_resultado, n_val)
   
-  -- subida aritmética real y progresiva paso a paso
   ops_totales = ops_totales + 1
 
-  -- [MEJORA GATO] - INTERCEPTOR DE OPERACIÓN 400
+  -- Interceptor Operación 400: El Gato
   if ops_totales == 400 then
-    modo_actual = 4       -- Activamos Modo Cinemática del Beso Gigante
-    ani_gato_frames = 0   -- Reseteamos el reloj de la animación
-    estado_beso = 120     -- Forzamos la animación de la boca de beso por 2 segundos
+    modo_actual = 4       
+    ani_gato_frames = 0   
+    estado_beso = 120     
+  -- Interceptor Operación 520: Juego de Naves
+  elseif ops_totales == 520 then
+    modo_actual = 7       -- Estado 7: Cinemática de invitación para las Naves
+    ani_gato_frames = 0   
+    estado_beso = 120     
   end
   
-  -- condición de liberación: si logró subir del -1 al 0
   if ops_totales == 0 and borrados_seguidos >= 2 then
-    borrados_seguidos = 0 -- limpia los castigos anteriores de raíz
+    borrados_seguidos = 0 
   end
   
-  -- sumamos al contador de registros entre borrados normales
   reg_desde_borrado = reg_desde_borrado + 1
-  
   dset(1, ops_totales) 
 end
 
@@ -511,7 +518,7 @@ end
 
 
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.09]
+-- CALCULATOR XTREE FORCE [v0.10]
 -- PARTE 4: MOTOR GRÁFICO AISLADO Y MÓDULO RENDER
 -- =========================================================
 
@@ -530,6 +537,15 @@ function _draw()
     return
   elseif modo_actual == 5 then
     render_pantalla_gato(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+    return
+  end
+
+  -- Juego de Naves 
+  if modo_actual == 6 then
+    render_pantalla_naves(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+    return
+  elseif modo_actual == 7 then
+    render_cinematica_beso_central_naves(c_fondo)
     return
   end
   
@@ -674,7 +690,7 @@ function _draw()
   render_ranita_xtree(ranita_x, ranita_y)
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.09]
+-- CALCULATOR XTREE FORCE [v0.10]
 -- PARTE 5: CONTROL EMOCIONAL Y DIBUJO DE LA MASCOTA
 -- =========================================================
 
@@ -772,7 +788,7 @@ end
 
 
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.09]
+-- CALCULATOR XTREE FORCE [v0.10]
 -- PARTE 6: PROCESADOR MATEMÁTICO Y PARSEO DE ENTRADA (REPARADO)
 -- =========================================================
 
@@ -1129,7 +1145,7 @@ function render_cinematica_beso_central(c_fondo)
   -- Dibujamos un marco decorativo de felicitaciones
   rect(2, 2, 125, 125, 10)
   rectfill(4, 4, 123, 14, 0)
-  print("Xtree reward!", 32, 7, 7)
+  print("reward xtree!", 32, 7, 7)
   
   -- Escalamos la posición de la ranita a casi la mitad de la resolución (Centro)
   local rx = 58
@@ -1213,10 +1229,174 @@ function render_pantalla_gato(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_tx
     print("press A: play again", 16, 105, c_p)
     print("press b: return to calc", 14, 115, 5)
   else
-    print("\x8b\x91\x94\x83:move to A: confirm", 4, 105, 7)
+    print("\x8b\x91\x94\x83:move and A:confirm", 4, 105, 7)
     print("Press b: exit to the calculator", 14, 115, 5)
   end
 
   -- Pintamos a la ranita en la esquina del menú inferior manteniendo su estado emocional actual
+  render_ranita_xtree(114, 114)
+end
+
+-- =========================================================
+-- CALCULATOR XTREE FORCE [v0.10]
+-- PARTE 7: MINIJUEGO DE NAVES ENCAPSULADO (MIPS-SAFE)
+-- =========================================================
+
+function iniciar_naves_ranita()
+  -- Reciclamos el tablero para almacenar los objetos flotantes:
+  -- gato_tablero[1] = Nave del jugador { x_pantalla, velocidad, 0 }
+  -- gato_tablero[2] = Datos del disparo { x, y, activo(0 o 1) }
+  -- gato_tablero[3] = Datos del enemigo/objeto { x, y, tamaño }
+  gato_tablero = {
+    {64, 2, 0},   -- Nave centrada en X=64
+    {0, 0, 0},    -- Disparo inactivo
+    {34 + flr(rnd(50)), 32, 2} -- Objeto inicial con tamaño base 2
+  }
+  gato_cx = 0     -- Usamos gato_cx como el Score (Puntaje actual)
+  gato_estado = "" -- "", "gana_user", "muerto"
+  modo_actual = 6 -- Activamos la pantalla del juego de naves
+end
+
+function actualizar_cinematica_beso_naves()
+  ani_gato_frames = ani_gato_frames + 1
+  estado_beso = 90
+  if ani_gato_frames >= 120 then
+    ops_totales = 521 -- Rompe el bucle para no repetirse
+    dset(1, ops_totales)
+    estado_beso = 0
+    iniciar_naves_ranita()
+  end
+end
+
+function actualizar_logica_naves()
+  -- BOTÓN B: Salida segura instantánea
+  if btnp(5) then modo_actual = 0 sfx(0) return end
+
+  -- Reiniciar si terminó la partida
+  if gato_estado != "" then
+    if btnp(4) then iniciar_naves_ranita() end
+    return
+  end
+
+  -- 1. Movimiento de la Nave (Límites fijos del cuadro central: X entre 36 y 88)
+  if btn(0) and gato_tablero[1][1] > 36 then gato_tablero[1][1] = gato_tablero[1][1] - gato_tablero[1][2] end
+  if btn(1) and gato_tablero[1][1] < 88 then gato_tablero[1][1] = gato_tablero[1][1] + gato_tablero[1][2] end
+
+  -- 2. Botón A: Disparar (Solo si no hay un disparo activo en pantalla)
+  if btnp(4) and gato_tablero[2][3] == 0 then
+    gato_tablero[2][1] = gato_tablero[1][1] + 2 -- Centrar bala en la nave
+    gato_tablero[2][2] = 88                      -- Eje Y inicial (justo arriba de la nave)
+    gato_tablero[2][3] = 1                      -- Activar bala
+    tocar_sfx(2)
+  end
+
+  -- 3. Física del Disparo
+  if gato_tablero[2][3] == 1 then
+    gato_tablero[2][2] = gato_tablero[2][2] - 3 -- Sube la bala
+    if gato_tablero[2][2] < 32 then gato_tablero[2][3] = 0 end -- Desaparece en el borde superior del cuadro
+  end
+
+  -- 4. Física del Objeto que Cae
+  gato_tablero[3][2] = gato_tablero[3][2] + 0.6 -- El objeto cae de forma fija y constante
+  
+  -- Colisión de la Bala con el Objeto
+  if gato_tablero[2][3] == 1 then
+    local dist_x = abs(gato_tablero[2][1] - gato_tablero[3][1])
+    local dist_y = abs(gato_tablero[2][2] - gato_tablero[3][2])
+    -- Si impacta considerando el tamaño dinámico del objeto
+    if dist_x < (gato_tablero[3][3] + 2) and dist_y < (gato_tablero[3][3] + 2) then
+      gato_tablero[2][3] = 0 -- Destruye la bala
+      gato_cx = gato_cx + 50  -- Suma 50 puntos
+      tocar_sfx(3)
+      
+      -- Condición de Victoria: 900 puntos alcanzados
+      if gato_cx >= 900 then
+        gato_estado = "gana_user"
+        return
+      end
+      
+      -- Respawn del enemigo: reaparece arriba con más tamaño (Crece el peligro)
+      gato_tablero[3][1] = 36 + flr(rnd(48))
+      gato_tablero[3][2] = 32
+      gato_tablero[3][3] = min(gato_tablero[3][3] + 1, 7) -- Crece el objeto hasta un máximo de 7 píxeles
+    end
+  end
+
+  -- Colisión del Objeto con la Nave o el Suelo
+  if gato_tablero[3][2] >= 88 then
+    local col_nave = abs(gato_tablero[3][1] - gato_tablero[1][1])
+    if col_nave < (gato_tablero[3][3] + 3) then
+      gato_estado = "muerto" -- Chocó contra la nave, pierdes
+      tocar_sfx(1)
+    else
+      -- Si llega abajo sin tocarte, se auto-destruye y reaparece arriba
+      gato_tablero[3][1] = 36 + flr(rnd(48))
+      gato_tablero[3][2] = 32
+    end
+  end
+end
+
+function render_cinematica_beso_central_naves(c_fondo)
+  cls(c_fondo)
+  rect(2, 2, 125, 125, 11)
+  rectfill(4, 4, 123, 14, 0)
+  print("Space challenge!", 34, 7, 7)
+  render_ranita_xtree(58, 54 + flr(sin(ranita_anim / 30) * 2))
+  print("thanks for calculating", 24, 94, 7)
+  print("Ready to fly? <3", 22, 103, 10)
+end
+
+function render_pantalla_naves(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+  cls(c_fondo)
+  
+  -- Encabezado
+  rectfill(0, 0, 127, 13, c_display)
+  line(0, 13, 127, 13, c_btn_txt)
+  print("little frog space force", 28, 4, c_txt_dis)
+  
+  -- Marcador de Estado
+  if gato_estado == "gana_user" then
+    print("900 points! You won", 32, 18, 11)
+  elseif gato_estado == "muerto" then
+    print("destroyed ship", 36, 18, 8)
+  else
+    print("score: "..gato_cx.." / 900", 30, 18, c_btn_txt)
+  end
+
+  -- Cuadro de Juego central (Idéntico en tamaño y posición al del Gato)
+  local ox, oy = 34, 32
+  rectfill(ox, oy, ox + 60, oy + 60, c_display)
+  rect(ox, oy, ox + 60, oy + 60, c_btn_bse)
+
+  -- Renderizar la Bala (Puntito parpadeante o de color contrastante)
+  if gato_tablero[2][3] == 1 then
+    rectfill(gato_tablero[2][1], gato_tablero[2][2], gato_tablero[2][1] + 1, gato_tablero[2][2] + 2, 10)
+  end
+
+  -- Renderizar el Objeto / Asteroide (Círculo relleno que crece de tamaño)
+  local obs_x = gato_tablero[3][1]
+  local obs_y = gato_tablero[3][2]
+  local obs_r = gato_tablero[3][3]
+  rectfill(obs_x - obs_r, obs_y - obs_r, obs_x + obs_r, obs_y + obs_r, 8)
+
+  -- Renderizar la Nave del Jugador (Mini triángulo estilizado)
+  local nx = gato_tablero[1][1]
+  line(nx, 90, nx + 4, 90, c_btn_txt)
+  line(nx, 90, nx + 2, 86, c_btn_txt)
+  line(nx + 4, 90, nx + 2, 86, c_btn_txt)
+
+  -- Barra de Controles Inferior
+  rectfill(0, 100, 127, 127, 0)
+  line(0, 100, 127, 100, 6)
+  
+  if gato_estado != "" then
+    local c_p = (ranita_anim % 20 < 10) and 10 or 7
+    print("press A: retry", 24, 105, c_p)
+    print("Press b: exit to calc", 18, 115, 5)
+  else
+    print("\x8b\x91:move  A:shoot", 14, 105, 7)
+    print("Press b: exit to the calculator", 14, 115, 5)
+  end
+
   render_ranita_xtree(114, 114)
 end
