@@ -19,7 +19,7 @@
 <!-- APP CARD START -->
 <div>
   <!-- APP HEADER -->
-  <h3>🧮 Calculator Xtree <kbd>V0.09</kbd></h3>
+  <h3>🧮 Calculator Xtree <kbd>V0.10</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -129,7 +129,11 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.11 (Add Notes Xtree V0.02) - current version</h4>
+    <h4>Version 0.12 (Calculator Xtree V0.10) - current version</h4>
+    <ul>
+      <li>-Another minigame has just been added; the little frog will invite you to play it once you surpass 500 historical records.</li>
+    </ul>
+    <h4>Version 0.11 (Add Notes Xtree V0.02)</h4>
     <ul>
       <li>Fixed some visual issues with the little frog.</li>
       <li>Added two new languages ​​(Chinese and Japanese); these are implemented in a way that is fully supported by PICO-8 for now.</li>
