@@ -2,13 +2,13 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.02]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.03]
 -- PARTE 1 DE 4: NÚCLEO DE INICIALIZACIÓN Y CONTROL DE FLUX
 -- =========================================================
 
 function _init()
   id_nombre = "ADD NOTES XTREE"
-  id_version = "V0.02"
+  id_version = "V0.03"
   
   -- MÁQUINA DE ESTADOS COMPATIBLE CON MIPS
   -- 0 = selector de idioma
@@ -27,7 +27,7 @@ function _init()
     "[","]","(",")","{","}","@",":","#","$","&","_",";"
   }
   
-  lista_idiomas = {"1. espanol", "2. english", "3. polski", "4. russian", "5. portugues", "6. italiano", "7. francais", "8. nihongo (jp)", "9. zhongwen (cn)"}
+  lista_idiomas = {"1. espanol", "2. english", "3. polski", "4. russian", "5. portugues", "6. italiano", "7. francais", "8. nihongo (jp)", "9. zhongwen (cn)", "10. hangugeo (kr)", "11. turkce (tr)"}
   nombres_temas_notas = {"matrix", "neon mid", "cyber", "ocean", "magma", "forest", "steel"}
   
   textos_sistema = {
@@ -39,7 +39,9 @@ function _init()
     {"scegli lingua:", "profilo sesso:", "uomo", "donna", "n/a", "note:", "crea nota?", "vedi", "modifica", "elimina", "vuoto", "caratteri:", "salva", "esci", "info"},
     {"choisir langue:", "profil sexe:", "homme", "femme", "n/a", "notes:", "creer note?", "voir", "modifier", "effacer", "vide", "caracteres:", "garder", "sortir", "a propos"},
     {"gengo sentaku:", "seibetsu:", "dansei", "josei", "sonota", "memo suu:", "sakusei?", "miru", "henshuu", "sakujo", "kara", "moji suu:", "hozon", "modoru", "jouhou"},
-    {"xuanze yuyan:", "xingbie:", "nanxing", "nvxing", "wuxiao", "biji shu:", "xinjian?", "chakan", "bianji", "shanchu", "kong", "zifu shu:", "baocun", "tuichu", "guanyu"}
+    {"xuanze yuyan:", "xingbie:", "nanxing", "nvxing", "wuxiao", "biji shu:", "xinjian?", "chakan", "bianji", "shanchu", "kong", "zifu shu:", "baocun", "tuichu", "guanyu"},
+    {"eoneo seontaek:", "seongbyeol:", "namseong", "yeoseong", "gita", "memo su:", "saengseong?", "bogi", "pyeonjip", "sakje", "bieo isseum", "geulja su:", "jeojang", "nagagi", "jeongbo"},
+    {"dil secin:", "cinsiyet:", "erkek", "kadin", "yok", "notlar:", "not olustur?", "gor", "duzenle", "sil", "bos", "karakter:", "kaydet", "cikis", "hakkinda"}
   }
 
   -- Configuración de usuario por defecto
@@ -76,6 +78,9 @@ function _init()
   ranita_anim = 0
   cronometro_emocion = 0
   estado_emocional = 1 
+  aviso_texto = ""
+  aviso_timer = 0
+  codigos_idioma = {"es", "en", "pl", "ru", "pt", "it", "fr", "jp", "cn", "kr", "tr"}
   
   str_reloj = "00:00:00"
   
@@ -90,6 +95,8 @@ function _update()
     local ok = pcall(function() cartdata("xtree_notes_pro") end)
     if ok then cargar_configuracion_inicial() end
   end
+
+  if aviso_timer > 0 then aviso_timer = aviso_timer - 1 end
 
   -- 2. Animación base e inteligencia emocional dinámica de la mascota
   ranita_anim = (ranita_anim + 1) % 60
@@ -136,8 +143,8 @@ function _update()
 
   -- 5. Procesador nativo de la máquina de estados con flancos discretos (btnp)
   if modo_actual == 0 then
-    if btnp(2) then cursor_idioma = cursor_idioma - 1 if cursor_idioma < 1 then cursor_idioma = 9 end end
-    if btnp(3) then cursor_idioma = cursor_idioma + 1 if cursor_idioma > 9 then cursor_idioma = 1 end end
+    if btnp(2) then cursor_idioma = cursor_idioma - 1 if cursor_idioma < 1 then cursor_idioma = 11 end end
+    if btnp(3) then cursor_idioma = cursor_idioma + 1 if cursor_idioma > 11 then cursor_idioma = 1 end end
     if btnp(4) then
       idioma_actual = cursor_idioma
       pcall(function() dset(0, idioma_actual) end)
@@ -165,7 +172,7 @@ function _update()
   end
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.02]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.03]
 -- PARTE 2 DE 4: DESPACHADOR DE COLOR Y SELECTORES INICIALES
 -- =========================================================
 
@@ -204,15 +211,15 @@ function render_selector_idioma()
   rect(2, 2, 125, 125, 5)
   rectfill(4, 4, 123, 14, 1)
   print("add notes xtree", 32, 7, 7)
-  print("elije tu idioma / select:", 14, 21, 6)
+  print("elije tu idioma / select:", 14, 19, 6)
   
-  -- Renderizado lineal directo compatible con arquitecturas portátiles (9 idiomas)
-  for i=1, 9 do
-    local ly = 32 + (i - 1) * 9
+  -- Renderizado lineal directo para 11 idiomas
+  for i=1, 11 do
+    local ly = 29 + (i - 1) * 7
     local texto_menu = lista_idiomas[i]
     
     if i == cursor_idioma then
-      rectfill(6, ly - 1, 121, ly + 6, 5)
+      rectfill(6, ly - 1, 121, ly + 5, 5)
       print("-> " .. texto_menu, 10, ly, 7)
     else
       print("   " .. texto_menu, 10, ly, 13)
@@ -246,7 +253,7 @@ function render_selector_perfil()
   print("(a): ok", 48, 112, 10)
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.02]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.03]
 -- PARTE 3 DE 4: MENÚ DE NOTAS Y MASCOTA CON EXPRESIONES
 -- =========================================================
 
@@ -261,12 +268,17 @@ function actualizar_menu_principal_notas()
   local b_oprimido = btn(5) or stat(30) == 14
   
   if not b_oprimido then
-    if btnp(2) then cursor_menu = cursor_menu - 1 if cursor_menu < 1 then cursor_menu = max_opciones end end 
-    if btnp(3) then cursor_menu = cursor_menu + 1 if cursor_menu > max_opciones then cursor_menu = 1 end end 
+    if btnp(2) then cursor_menu = cursor_menu - 1 if cursor_menu < 0 then cursor_menu = max_opciones end end 
+    if btnp(3) then cursor_menu = cursor_menu + 1 if cursor_menu > max_opciones then cursor_menu = 0 end end 
     
     -- Ingreso normal con el Botón A físico
     if btnp(4) and not bloqueo_a then
-      if cursor_menu == 1 then
+      if cursor_menu == 0 then
+        -- Acceso directo al selector de idiomas manteniendo intactas las notas
+        cursor_idioma = idioma_actual
+        cursor_perfil = perfil_sexo
+        modo_actual = 0
+      elseif cursor_menu == 1 then
         if total_actual < total_notas_permitidas then
           texto_nota_buffer = ""
           cursor_texto_pos = 1
@@ -303,7 +315,7 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   line(0, 11, 127, 11, c_btn_txt)
   
   -- Nombre de la aplicación actualizado con su versión fija
-  print("ADD NOTES XTREE V0.02", 4, 3, c_txt_dis)
+  print("ADD NOTES XTREE V0.03", 4, 3, c_txt_dis)
   print(str_reloj, 94, 3, 5)
 
   local t_lang = textos_sistema[idioma_actual][6]  -- "notas creadas:"
@@ -312,6 +324,16 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   local total_actual = #lista_notas
   
   print(t_lang .. " " .. total_actual .. "/" .. total_notas_permitidas, 6, 16, c_btn_txt)
+
+  -- Botón seleccionable de idioma en la interfaz (cursor_menu == 0)
+  local tag_lang = "[" .. (codigos_idioma[idioma_actual] or "es") .. "]"
+  if cursor_menu == 0 then
+    rectfill(104, 14, 123, 22, c_btn_bse)
+    print(tag_lang, 106, 16, c_btn_txt)
+  else
+    rect(104, 14, 123, 22, c_btn_bse)
+    print(tag_lang, 106, 16, c_btn_txt)
+  end
   
   rectfill(4, 25, 123, 108, c_display)
   rect(4, 25, 123, 108, c_btn_bse)
@@ -346,6 +368,15 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   
   -- Guía visual interactiva que se adapta automáticamente al idioma seleccionado
   print("b+down:" .. textos_sistema[idioma_actual][10], 76, 119, 6)
+
+  -- Aviso flotante temporal al guardar o borrar notas
+  if aviso_timer > 0 then
+    local aw = #aviso_texto * 4 + 10
+    local ax = 64 - flr(aw / 2)
+    rectfill(ax, 56, ax + aw, 68, 0)
+    rect(ax, 56, ax + aw, 68, 11)
+    print(aviso_texto, ax + 5, 60, 7)
+  end
   
   -- [MEJORA VISUAL]: Ranita centrada horizontalmente abajo en el medio
   render_ranita_completa(59, 114)
@@ -488,7 +519,7 @@ end
 
 
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.02]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.03]
 -- PARTE 4 DE 4: TECLADO, VISOR, ACERCA DE Y PERSISTENCIA
 -- =========================================================
 
@@ -505,6 +536,15 @@ function actualizar_teclado_virtual()
     cursor_menu = 1
     bloqueo_a = false
     return
+  end
+
+  -- Cambio rápido de capa abc/123 con botones L1 o R1 del mando
+  if btnp(4, 1) or btnp(5, 1) then
+    if teclado_mapa == teclado_mapa_letras then
+      teclado_mapa = teclado_mapa_simbolos
+    else
+      teclado_mapa = teclado_mapa_letras
+    end
   end
 
   -- Selección estricta con el Botón A físico (Evita interferencias con el botón B)
@@ -547,6 +587,10 @@ function procesar_caracter_seguro(car)
       
       -- Llamamos al nuevo motor unificado de escritura física
       guardar_todo_en_sd()
+      aviso_texto = textos_sistema[idioma_actual][13] .. "!"
+      aviso_timer = 45
+      estado_emocional = 7
+      cronometro_emocion = 0
     end
     
     modo_actual = 2
@@ -658,15 +702,17 @@ end
 function render_pantalla_visor_nota(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
   cls(c_fondo)
   
+  local texto_completo = lista_notas[nota_seleccionada_idx] or ""
+  
   rectfill(0, 0, 127, 13, c_display)
   line(0, 13, 127, 13, c_btn_txt)
   print(textos_sistema[idioma_actual][8] .. " #" .. nota_seleccionada_idx, 4, 4, c_txt_dis)
+  print(#texto_completo .. "/120", 96, 4, c_btn_txt)
   
   rectfill(4, 18, 123, 102, c_display)
   rect(4, 18, 123, 102, c_btn_bse)
   
   clip(6, 20, 112, 80)
-  local texto_completo = lista_notas[nota_seleccionada_idx] or ""
   
   local renglon = 0
   for i = 1, #texto_completo, 24 do
@@ -679,12 +725,23 @@ function render_pantalla_visor_nota(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   end
   clip() 
   
+  -- Barra de desplazamiento (scrollbar) discreta en el borde derecho
+  local max_scroll = max(0, (renglon * 10) - 76)
+  if visor_scroll_y > max_scroll then visor_scroll_y = max_scroll end
+  if max_scroll > 0 then
+    line(120, 21, 120, 99, c_fondo)
+    local bar_h = max(10, flr(78 * (78 / (renglon * 10))))
+    local bar_y = 21 + flr((visor_scroll_y / max_scroll) * (78 - bar_h))
+    rectfill(119, bar_y, 121, bar_y + bar_h, c_btn_bse)
+  end
+  
   rectfill(0, 106, 127, 127, 0)
   line(0, 106, 127, 106, 6)
   print("\x8b\x91:scroll  (a):" .. textos_sistema[idioma_actual][9], 4, 110, 7)
   print("(b):" .. textos_sistema[idioma_actual][14], 4, 118, 5)
   render_ranita_completa(ranita_x, ranita_y)
 end
+
 
 function render_pantalla_acercade()
   cls(0)
@@ -725,6 +782,10 @@ function render_pantalla_acercade()
     t_ver = "baajon:" t_dev = "kaihatsusha:" t_ia = "ai kyouryoku:" t_mot = "enjin:" t_nuc = "koa:" t_sys = "shisutemu:" t_est = "joutai: taiou" t_atj = "--- shoutokatto ---" t_at1 = "b + ue: jouhou" t_at2 = "b + shita: sakujo" t_at3 = "b + hidari: kurejitto" t_at4 = "b + migi: teema henkou" t_at5 = "l1: abc/123 kirikae" t_fin = "--- arigatou gozaimasu ---"
   elseif idioma_actual == 9 then -- Zhongwen (Pinyin)
     t_ver = "banben:" t_dev = "kaifazhe:" t_ia = "ai xiezuo:" t_mot = "yinqing:" t_nuc = "hexin:" t_sys = "xitong:" t_est = "zhuangtai: jianrong" t_atj = "--- kuaijiejian ---" t_at1 = "b + shang: xinxi" t_at2 = "b + xia: shanchu" t_at3 = "b + zuo: mingdan" t_at4 = "b + you: huan zhuti" t_at5 = "l1: qiehuan abc/123" t_fin = "--- ganxie shiyong ---"
+  elseif idioma_actual == 10 then -- Hangugeo (Coreano)
+    t_ver = "beojeon:" t_dev = "gaebalja:" t_ia = "ai hyeobeop:" t_mot = "enjin:" t_nuc = "koeo:" t_sys = "siseutem:" t_est = "sangtae: hohwan" t_atj = "--- danchukki ---" t_at1 = "b + wi: jeongbo" t_at2 = "b + arae: sakje" t_at3 = "b + oenjjok: keuredit" t_at4 = "b + oreunjjok: tema" t_at5 = "l1: abc/123 jeonhwan" t_fin = "--- gamsahamnida ---"
+  elseif idioma_actual == 11 then -- Turkce (Turco)
+    t_ver = "surum:" t_dev = "gelistirici:" t_ia = "yz isbirligi:" t_mot = "motor:" t_nuc = "cekirdek:" t_sys = "sistem:" t_est = "durum: uyumlu" t_atj = "--- kisayollar ---" t_at1 = "b + ust: bilgi" t_at2 = "b + alt: notu sil" t_at3 = "b + sol: emegi gecenler" t_at4 = "b + sag: tema degistir" t_at5 = "l1: abc/123 gecis" t_fin = "--- tesekkurler ---"
   end
 
   -- Matriz lineal con los créditos extendidos ordenados secuencialmente
@@ -732,7 +793,7 @@ function render_pantalla_acercade()
     "--- " .. t_tit .. " ---",
     "",
     "app: add notes xtree",
-    t_ver .. " v0.02",
+    t_ver .. " v0.03",
     t_dev .. " martstartiv",
     t_ia .. " collaborative ai",
     "",
@@ -812,6 +873,10 @@ function eliminar_nota_seleccionada(idx)
     
     -- 3. Volcamos la lista actualizada de forma limpia a la SD
     guardar_todo_en_sd()
+    aviso_texto = textos_sistema[idioma_actual][10] .. "!"
+    aviso_timer = 45
+    estado_emocional = 3
+    cronometro_emocion = 0
     
     -- 4. Reseteamos los cursores de forma segura para evitar desbordamientos visuales
     cursor_menu = 1
@@ -864,7 +929,7 @@ function cargar_configuracion_inicial()
     tema = dget(2) or 0
   end)
   
-  if lang >= 1 and lang <= 9 then
+  if lang >= 1 and lang <= 11 then
     idioma_actual = lang
     perfil_sexo = (sex >= 1 and sex <= 3) and sex or 3
     idx_tema = (tema >= 1 and tema <= 7) and tema or 1
