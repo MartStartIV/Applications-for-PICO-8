@@ -66,7 +66,7 @@
 <!-- APP CARD START: ADD NOTES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>📝 Add Notes Xtree <kbd>V0.02</kbd></h3>
+  <h3>📝 Add Notes Xtree <kbd>V0.03</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -129,9 +129,17 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.12 (Calculator Xtree V0.10) - current version</h4>
+    <h4>Version 0.13 (Add Notes Xtree V0.03) - current version</h4>
     <ul>
-      <li>-Another minigame has just been added; the little frog will invite you to play it once you surpass 500 historical records.</li>
+      <li>New option in the main menu: you can now change the language without affecting your existing settings. (Note: This should preserve your notes, provided that you make a modification to a note when changing the language; otherwise, your notes might be deleted.)</li>
+      <li>You can now use L1 or R1 to toggle between letter mode and number/symbol mode, eliminating the need to switch via the virtual keyboard itself (based on current testing, this feature is not yet functional; I plan to address this soon, if possible).</li>
+      <li>New visual feedback when deleting or saving a note, including a reaction from the little frog.</li>
+      <li>New counter system added to the view screen for saved notes.</li>
+      <li>Two new languages ​​have been added: Korean and Turkish.</li>
+    </ul>
+    <h4>Version 0.12 (Calculator Xtree V0.10)</h4>
+    <ul>
+      <li>Another minigame has just been added; the little frog will invite you to play it once you surpass 500 historical records.</li>
     </ul>
     <h4>Version 0.11 (Add Notes Xtree V0.02)</h4>
     <ul>
