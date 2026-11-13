@@ -2,13 +2,13 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.03]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.04]
 -- PARTE 1 DE 4: NÚCLEO DE INICIALIZACIÓN Y CONTROL DE FLUX
 -- =========================================================
 
 function _init()
   id_nombre = "ADD NOTES XTREE"
-  id_version = "V0.03"
+  id_version = "V0.04"
   
   -- MÁQUINA DE ESTADOS COMPATIBLE CON MIPS
   -- 0 = selector de idioma
@@ -86,6 +86,34 @@ function _init()
   
   -- Cerrojo de seguridad asíncrono para el hardware
   boot_cargado = false
+
+  -- =========================================================
+  -- EXTENSIÓN CONFIGURACIONES ADICIONALES [PARTE 1]
+  -- =========================================================
+  config_abierta = false   -- controla si la ventana flotante está activa
+  config_cursor = 1        -- 1=zoom, 2=cambio idioma, 3=motivación, 4=borrado total
+  config_zoom = 0          -- 0 = letra normal, 1 = letra ampliada
+  config_motivacion = 0    -- 0 = desactivado, 1 = activado
+  confirma_borrado = false -- escudo preventivo si/no por defecto en no
+
+  -- banco de frases motivacionales ordenadas por idioma activo
+  frases_motivacion = {
+    "eres el mejor!",       -- 1. es
+    "you are the best!",    -- 2. en
+    "jestes najlepszy!",    -- 3. pl
+    "ty luchshiy!",         -- 4. ru
+    "voce e o melhor!",     -- 5. pt
+    "sei il migliore!",     -- 6. it
+    "tu es le meilleur!",   -- 7. fr
+    "anata wa saikou!",     -- 8. jp
+    "ni shi zui bang de!",  -- 9. cn
+    "dangsin-i 최고!",     -- 10. kr
+    "sen en iyisisin!"      -- 11. tr
+  }
+  frase_actual_idx = 1
+  frase_timer = 0
+  -- control de columna para la opcion 0 (1 = idioma, 2 = herramienta)
+  columna_menu_cero = 1
 end
 
 function _update()
@@ -162,7 +190,23 @@ function _update()
     end
     
   elseif modo_actual == 2 then
-    actualizar_menu_principal_notas()
+    if config_abierta then
+      actualizar_opciones_adicionales()
+    else
+      actualizar_menu_principal_notas()
+      
+      -- despachador de frases motivacionales si está encendido
+      if config_motivacion == 1 then
+        frase_timer = frase_timer + 1
+        if frase_timer > 300 then -- cambia de frase aproximadamente cada 10 segundos
+          frase_timer = 0
+          aviso_texto = frases_motivacion[idioma_actual]
+          aviso_timer = 90
+          estado_emocional = 4 -- la ranita se pone alegre automáticamente
+          cronometro_emocion = 0
+        end
+      end
+    end
   elseif modo_actual == 3 then
     actualizar_teclado_virtual()
   elseif modo_actual == 4 then
@@ -172,7 +216,7 @@ function _update()
   end
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.03]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.04]
 -- PARTE 2 DE 4: DESPACHADOR DE COLOR Y SELECTORES INICIALES
 -- =========================================================
 
@@ -253,7 +297,7 @@ function render_selector_perfil()
   print("(a): ok", 48, 112, 10)
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.03]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.04]
 -- PARTE 3 DE 4: MENÚ DE NOTAS Y MASCOTA CON EXPRESIONES
 -- =========================================================
 
@@ -261,31 +305,45 @@ function actualizar_menu_principal_notas()
   local total_actual = #lista_notas
   local max_opciones = total_actual + 1
   
-  -- Sincronización del cerrojo de seguridad anti-rebotes
   if btn(4) or stat(30) == 13 then bloqueo_a = true else bloqueo_a = false end
-
-  -- [CORTAFUEGOS]: Las flechas del D-Pad sólo navegan si NO se está oprimiendo el botón B
   local b_oprimido = btn(5) or stat(30) == 14
   
   if not b_oprimido then
     if btnp(2) then cursor_menu = cursor_menu - 1 if cursor_menu < 0 then cursor_menu = max_opciones end end 
     if btnp(3) then cursor_menu = cursor_menu + 1 if cursor_menu > max_opciones then cursor_menu = 0 end end 
     
-    -- Ingreso normal con el Botón A físico
-    if btnp(4) and not bloqueo_a then
+    -- [MOVIMIENTO HORIZONTAL EN LA FILA ZERO]
+    if cursor_menu == 0 then
+      if btnp(0) then columna_menu_cero = 1 end -- Izquierda: va a Idioma
+      if btnp(1) then columna_menu_cero = 2 end -- Derecha: va a Herramientas
+    end
+    
+    if not bloqueo_a then
       if cursor_menu == 0 then
-        -- Acceso directo al selector de idiomas manteniendo intactas las notas
-        cursor_idioma = idioma_actual
-        cursor_perfil = perfil_sexo
-        modo_actual = 0
-      elseif cursor_menu == 1 then
+        -- COLUMNA 1: Selector antiguo de pantalla completa de fábrica
+        if columna_menu_cero == 1 and btnp(4) then
+          cursor_idioma = idioma_actual
+          cursor_perfil = perfil_sexo
+          modo_actual = 0
+          return
+        end
+        
+        -- COLUMNA 2: Abre la nueva ventana flotante compacta adicional
+        if columna_menu_cero == 2 and btnp(4) then
+          config_abierta = true
+          config_cursor = 1
+          confirma_borrado = false 
+          return
+        end
+        
+      elseif btnp(4) and cursor_menu == 1 then
         if total_actual < total_notas_permitidas then
           texto_nota_buffer = ""
           cursor_texto_pos = 1
           modo_actual = 3 
           inicializar_teclado_config_segura()
         end
-      else
+      elseif btnp(4) then
         nota_seleccionada_idx = cursor_menu - 1
         visor_scroll_y = 0
         modo_actual = 4 
@@ -293,9 +351,7 @@ function actualizar_menu_principal_notas()
     end
   end
 
-  -- Combo de borrado seguro por flanco: B + Abajo (3 o 6)
   local presiona_abajo = btn(3) or stat(30) == 6
-  
   if b_oprimido and presiona_abajo and cursor_menu > 1 then
     if not bloqueo_borrar_combo then
       bloqueo_borrar_combo = true 
@@ -314,8 +370,7 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   rectfill(0, 0, 127, 11, c_display)
   line(0, 11, 127, 11, c_btn_txt)
   
-  -- Nombre de la aplicación actualizado con su versión fija
-  print("ADD NOTES XTREE V0.03", 4, 3, c_txt_dis)
+  print("ADD NOTES XTREE V0.04", 4, 3, c_txt_dis)
   print(str_reloj, 94, 3, 5)
 
   local t_lang = textos_sistema[idioma_actual][6]  -- "notas creadas:"
@@ -325,14 +380,29 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   
   print(t_lang .. " " .. total_actual .. "/" .. total_notas_permitidas, 6, 16, c_btn_txt)
 
-  -- Botón seleccionable de idioma en la interfaz (cursor_menu == 0)
+  -- [REPARACIÓN CRÍTICA]: Separación visual real de columnas en la opción 0
   local tag_lang = "[" .. (codigos_idioma[idioma_actual] or "es") .. "]"
+  
   if cursor_menu == 0 then
-    rectfill(104, 14, 123, 22, c_btn_bse)
-    print(tag_lang, 106, 16, c_btn_txt)
+    if columna_menu_cero == 1 then
+      -- Resalta ÚNICAMENTE el indicador de idioma
+      rectfill(84, 14, 103, 22, c_btn_bse)
+      print(tag_lang, 86, 16, c_btn_txt)
+      rect(107, 14, 123, 22, c_btn_bse)
+      print("[*]", 109, 16, c_btn_txt)
+    else
+      -- Resalta ÚNICAMENTE el icono de herramientas
+      rect(84, 14, 103, 22, c_btn_bse)
+      print(tag_lang, 86, 16, c_btn_txt)
+      rectfill(107, 14, 123, 22, c_btn_bse)
+      print("[*]", 109, 16, c_btn_txt)
+    end
   else
-    rect(104, 14, 123, 22, c_btn_bse)
-    print(tag_lang, 106, 16, c_btn_txt)
+    -- Comportamiento normal cuando no estás en la opción 0
+    rect(84, 14, 103, 22, c_btn_bse)
+    print(tag_lang, 86, 16, c_btn_txt)
+    rect(107, 14, 123, 22, c_btn_bse)
+    print("[*]", 109, 16, c_btn_txt)
   end
   
   rectfill(4, 25, 123, 108, c_display)
@@ -351,11 +421,21 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
     for i=1, total_actual do
       local ly = 26 + (i * 11)
       local titulo_nota = sub(lista_notas[i], 1, 14) .. "..."
+      
       if cursor_menu == (i + 1) then
         rectfill(6, ly - 1, 121, ly + 7, c_btn_bse)
-        print("-> " .. i .. ". " .. titulo_nota, 10, ly, c_btn_txt)
+        -- [ZOOM REPARADO]: Eliminamos upper() y aplicamos espaciado ancho nativo seguro (\x06)
+        if config_zoom == 1 then
+          print("\x06->" .. i .. "." .. sub(titulo_nota, 1, 8), 10, ly, c_btn_txt)
+        else
+          print("-> " .. i .. ". " .. titulo_nota, 10, ly, c_btn_txt)
+        end
       else
-        print("   " .. i .. ". " .. titulo_nota, 10, ly, c_txt_dis)
+        if config_zoom == 1 then
+          print("\x06  " .. i .. "." .. sub(titulo_nota, 1, 8), 10, ly, c_txt_dis)
+        else
+          print("   " .. i .. ". " .. titulo_nota, 10, ly, c_txt_dis)
+        end
       end
     end
   end
@@ -365,11 +445,8 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   
   local col_nombre_tema = (c_fondo == 15 or c_fondo == 7) and 0 or 5
   print("t:" .. nombres_temas_notas[idx_tema], 4, 119, col_nombre_tema)
-  
-  -- Guía visual interactiva que se adapta automáticamente al idioma seleccionado
   print("b+down:" .. textos_sistema[idioma_actual][10], 76, 119, 6)
 
-  -- Aviso flotante temporal al guardar o borrar notas
   if aviso_timer > 0 then
     local aw = #aviso_texto * 4 + 10
     local ax = 64 - flr(aw / 2)
@@ -378,8 +455,11 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
     print(aviso_texto, ax + 5, 60, 7)
   end
   
-  -- [MEJORA VISUAL]: Ranita centrada horizontalmente abajo en el medio
   render_ranita_completa(59, 114)
+
+  if config_abierta then
+    render_ventana_opciones_adicionales(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
+  end
 end
 
 
@@ -519,7 +599,7 @@ end
 
 
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.03]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.04]
 -- PARTE 4 DE 4: TECLADO, VISOR, ACERCA DE Y PERSISTENCIA
 -- =========================================================
 
@@ -793,7 +873,7 @@ function render_pantalla_acercade()
     "--- " .. t_tit .. " ---",
     "",
     "app: add notes xtree",
-    t_ver .. " v0.03",
+    t_ver .. " v0.04",
     t_dev .. " martstartiv",
     t_ia .. " collaborative ai",
     "",
@@ -886,11 +966,17 @@ end
 -- [NUEVA FUNCIÓN CRÍTICA]: Motor único de serialización por bloques para TreeFrogUI
 function guardar_todo_en_sd()
   pcall(function()
+    -- 1. Guardamos configuraciones básicas nativas de fábrica
     dset(0, idioma_actual)
     dset(1, perfil_sexo)
     dset(2, idx_tema)
-    dset(3, #lista_notas) 
+    dset(3, #lista_notas) -- El Slot 3 vuelve a ser exclusivamente el total de notas como antes
     
+    -- 2. Guardamos las nuevas configuraciones en el Slot 4 de forma aislada
+    local empaquetado_config = config_zoom + (config_motivacion * 10)
+    dset(4, empaquetado_config)
+    
+    -- 3. Tu motor original exacto de volcado de caracteres por bloques a la SD
     for i = 1, total_notas_permitidas do
       local slot_base = 10 + (i - 1) * 130
       
@@ -902,7 +988,6 @@ function guardar_todo_en_sd()
           local letra = sub(nota_str, c, c)
           local id_char = 1 -- Espacio por defecto si falla
           
-          -- Busca el ID exacto en el diccionario expandido
           for k = 1, #comp_dict do
             if comp_dict[k] == letra then 
               id_char = k 
@@ -912,13 +997,12 @@ function guardar_todo_en_sd()
           dset(slot_base + c, id_char)
         end
       else
-        -- Borramos el sector sobrante en la SD poniéndolo en 0
+        -- Borramos el sector sobrante en la SD tal cual como lo programaste
         dset(slot_base, 0)
       end
     end
   end)
 end
-
 
 function cargar_configuracion_inicial()
   local lang, sex, tema = 0, 0, 0
@@ -935,15 +1019,24 @@ function cargar_configuracion_inicial()
     idx_tema = (tema >= 1 and tema <= 7) and tema or 1
     
     lista_notas = {}
+    -- Recuperamos el total de notas real de tu Slot 3 original
     local total_g = dget(3) or 0
     if total_g < 0 or total_g > total_notas_permitidas then total_g = 0 end
     
-    -- [RECONSTRUCCIÓN REAL COMPATIBLE]: Recupera los caracteres grabados en la SD
+    -- Recuperamos las opciones adicionales del Slot 4 sin interferir con las notas
+    local empaquetado_config = dget(4) or 0
+    config_zoom = empaquetado_config % 10
+    config_motivacion = flr(empaquetado_config / 10)
+    
+    -- Escudos protectores por rango
+    if config_zoom < 0 or config_zoom > 1 then config_zoom = 0 end
+    if config_motivacion < 0 or config_motivacion > 1 then config_motivacion = 0 end
+    
+    -- [RECONSTRUCCIÓN REAL COMPATIBLE FIJA]: Recupera tus strings tal cual como antes
     for i = 1, total_g do
       local slot_base = 10 + (i - 1) * 130
       local longitud_texto = dget(slot_base) or 0
       
-      -- Escudo protector para evitar congelamientos por corrupción física
       if longitud_texto < 0 or longitud_texto > 120 then longitud_texto = 0 end
       
       local texto_reconstruido = ""
@@ -956,12 +1049,115 @@ function cargar_configuracion_inicial()
         end
       end
       
-      -- Inserta el texto real escrito por el usuario en la RAM
-      add(lista_notas, texto_reconstruido)
+      -- Inserta el texto real completo del usuario en la memoria RAM
+      add(lista_notas, texto_reconstructed or texto_reconstruido)
     end
     
     modo_actual = 2 
   else
     modo_actual = 0 
   end
+end
+
+
+function actualizar_opciones_adicionales()
+  if btnp(2) then config_cursor = config_cursor - 1 if config_cursor < 1 then config_cursor = 4 end end
+  if btnp(3) then config_cursor = config_cursor + 1 if config_cursor > 4 then config_cursor = 1 end end
+
+  if btnp(5) or stat(30) == 14 then
+    config_abierta = false
+    guardar_todo_en_sd()
+    return
+  end
+
+  if config_cursor == 1 then
+    if btnp(0) or btnp(1) then config_zoom = (config_zoom == 0) and 1 or 0 end
+    
+  elseif config_cursor == 2 then
+    if btnp(0) then idioma_actual = idioma_actual - 1 if idioma_actual < 1 then idioma_actual = 11 end end
+    if btnp(1) then idioma_actual = idioma_actual + 1 if idioma_actual > 11 then idioma_actual = 1 end end
+    
+  elseif config_cursor == 3 then
+    if btnp(0) or btnp(1) then
+      config_motivacion = (config_motivacion == 0) and 1 or 0
+      -- [CORRECCIÓN CRÍTICA]: Enlace correcto al cronómetro real del sistema de expresiones
+      if config_motivacion == 1 then estado_emocional = 4 cronometro_emocion = 0 end 
+    end
+    
+  elseif config_cursor == 4 then
+    if btnp(0) or btnp(1) then confirma_borrado = not confirma_borrado end
+    
+    if (btnp(4) or stat(30) == 13) and confirma_borrado then
+      pcall(function()
+        cartdata("xtree_notes_pro")
+        for slot = 0, 1500 do dset(slot, 0) end 
+      end)
+      lista_notas = {}
+      idioma_actual = 1
+      perfil_sexo = 3
+      idx_tema = 1
+      config_zoom = 0
+      config_motivacion = 0
+      config_abierta = false
+      modo_actual = 0 
+      return
+    end
+  end
+end
+
+function render_ventana_opciones_adicionales(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
+  local t_config = {
+    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacion", "formatear", "si", "no", "b: salir/grv"},
+    {"extra cfgs",   "text zoom",  "lang/idioma", "motivation", "wipe clear", "yes","no", "b: exit/save"},
+    {"cfg. dodatk",  "zoom tekstu", "jezyk/lang", "motywacja",  "czyszczenie", "tak","nie","b: wyjdz/zap"},
+    {"dop. nastr",   "masshtab",   "yazik/lang",  "motivaciya", "ochistka",   "da", "net","b: vyhod/shran"},
+    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacao",  "formatar",   "sim","nao","b: sair/salv"},
+    {"cfg. extra",   "zoom testo", "lingua/lang", "motivazione","formatta",   "si", "no", "b: esci/salv"},
+    {"cfg. extras",  "zoom texte", "langue/lang", "motivation", "effacer to", "oui","non","b: sortir/grd"},
+    {"sono hoka",    "moji zoom",  "gengo/lang",  "douki zuke", "shokika",    "hai","iie","b: modoru/hoz"},
+    {"geng duo she", "zi ti da xiao","yu yan/lang","ji li",       "qing chu",   "shi","fou","b: tui chu/bao"},
+    {"gita seolt",   "geulja zoom","eoneo/lang",  "donggi buyeo","gongjang ch","ye", "ani","b: nagagi/jeo"},
+    {"ek ayarlar",   "metin zoomu", "dil/lang",    "motivasyon", "sifirla",    "evet","hayir","b: cikis/kayd"}
+  }
+
+  local m_data = t_config[idioma_actual]
+  local vx, vy, vw, vh = 12, 18, 104, 92
+  
+  rectfill(vx, vy, vx + vw, vy + vh, 0)         
+  rect(vx, vy, vx + vw, vy + vh, c_btn_bse)     
+  rectfill(vx + 2, vy + 2, vx + vw - 2, vy + 12, c_display) 
+  print(m_data[1], vx + 6, vy + 4, c_txt_dis)   
+  
+  -- Fila 1: Zoom de letra
+  local ly1 = vy + 18
+  if config_cursor == 1 then rectfill(vx + 4, ly1 - 2, vx + vw - 4, ly1 + 6, c_btn_bse) end
+  print(m_data[2] .. ":", vx + 6, ly1, config_cursor == 1 and c_btn_txt or c_txt_dis)
+  print(config_zoom == 1 and "on" or "off", vx + 80, ly1, config_zoom == 1 and 10 or 8)
+  
+  -- Fila 2: Idioma rápido
+  local ly2 = vy + 34
+  if config_cursor == 2 then rectfill(vx + 4, ly2 - 2, vx + vw - 4, ly2 + 6, c_btn_bse) end
+  print(m_data[3] .. ":", vx + 6, ly2, config_cursor == 2 and c_btn_txt or c_txt_dis)
+  print("<" .. codigos_idioma[idioma_actual] .. ">", vx + 74, ly2, 11)
+  
+  -- Fila 3: Motivación
+  local ly3 = vy + 50
+  if config_cursor == 3 then rectfill(vx + 4, ly3 - 2, vx + vw - 4, ly3 + 6, c_btn_bse) end
+  print(m_data[4] .. ":", vx + 6, ly3, config_cursor == 3 and c_btn_txt or c_txt_dis)
+  print(config_motivacion == 1 and "on" or "off", vx + 80, ly3, config_motivacion == 1 and 10 or 8)
+  
+  -- Fila 4: Formateo de Fábrica
+  local ly4 = vy + 66
+  if config_cursor == 4 then rectfill(vx + 4, ly4 - 2, vx + vw - 4, ly4 + 6, c_btn_bse) end
+  print(m_data[5], vx + 6, ly4, config_cursor == 4 and c_btn_txt or 8)
+  
+  if confirma_borrado then
+    rectfill(vx + 76, ly4 - 1, vx + 98, ly4 + 5, 8) 
+    print(m_data[6], vx + 78, ly4, 7)
+  else
+    rectfill(vx + 76, ly4 - 1, vx + 98, ly4 + 5, 12) 
+    print(m_data[7], vx + 78, ly4, 7)
+  end
+  
+  print(m_data[8], vx + 14, vy + 82, 6)
 end
