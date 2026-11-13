@@ -66,7 +66,7 @@
 <!-- APP CARD START: ADD NOTES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>📝 Add Notes Xtree <kbd>V0.03</kbd></h3>
+  <h3>📝 Add Notes Xtree <kbd>V0.04</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -129,7 +129,13 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.13 (Add Notes Xtree V0.03) - current version</h4>
+    <h4>Version 0.14 (Add Notes Xtree V0.04) - current version</h4>
+    <ul>
+      <li>An additional settings system has been added, which will allow for the inclusion of more options in this floating window in the future.</li>
+      <li>New options have been added to the additional settings, including: text zooming (this applies a brief zoom to on-screen informational text though not all of it; this feature is currently limited and will be improved over time), instant language switching, a motivational feature that occasionally displays encouraging messages, and an option to clear all data saved within the app.</li>
+      <li>Several minor bugs have been fixed.</li>
+    </ul>
+    <h4>Version 0.13 (Add Notes Xtree V0.03)</h4>
     <ul>
       <li>New option in the main menu: you can now change the language without affecting your existing settings. (Note: This should preserve your notes, provided that you make a modification to a note when changing the language; otherwise, your notes might be deleted.)</li>
       <li>You can now use L1 or R1 to toggle between letter mode and number/symbol mode, eliminating the need to switch via the virtual keyboard itself (based on current testing, this feature is not yet functional; I plan to address this soon, if possible).</li>
