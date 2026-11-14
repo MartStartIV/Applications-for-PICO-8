@@ -123,7 +123,6 @@
 </div>
 <!-- APP CARD END: ADD NOTES XTREE -->
 
-  <br>
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
@@ -189,7 +188,17 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.14 (Add Notes Xtree V0.04) - current version</h4>
+    <h4>Version 0.15 (Counter Games Xtree V0.01) - current version</h4>
+    <ul>
+      <li>Here is a new application for PICO-8, designed for tracking progress in games. It is the most comprehensive tool I have created with the help of AI to help you keep better tabs on your in game achievements</li>
+      <li>It includes support for 18 languages, which is a significant feature.</li>
+      <li>You can enter a profile username using a modernized virtual keyboard built for PICO-8</li>
+      <li>The main menu provides access to additional options. The interface comes with a default design, but you can choose from at least 4 different themes (in the options menu). From the main menu, you can press B + Left to view the "About" section, press A to add a new game, or press Right to access your most recently added game</li>
+      <li>Within a game, you will see categories for specific objectives, and you can add more as you like.</li>
+      <li>There is an LED-style indicator system: when you complete an objective, press A to confirm it (you can also change which button is used for this).</li>
+      <li>The options menu offers a wide range of settings: instant language switching, UI theme selection, an "auto-theme" feature (which adapts to the specific game you are playing), UI zooming, a "motivation" feature (which provides encouraging messages from time to time), the ability to change the little frog's mood, button configuration, an "About" section, and an option to clear all saved data.</li>
+    </ul>
+    <h4>Version 0.14 (Add Notes Xtree V0.04)</h4>
     <ul>
       <li>An additional settings system has been added, which will allow for the inclusion of more options in this floating window in the future.</li>
       <li>New options have been added to the additional settings, including: text zooming (this applies a brief zoom to on-screen informational text though not all of it; this feature is currently limited and will be improved over time), instant language switching, a motivational feature that occasionally displays encouraging messages, and an option to clear all data saved within the app.</li>
