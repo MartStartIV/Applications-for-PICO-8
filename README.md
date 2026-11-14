@@ -124,6 +124,66 @@
 <!-- APP CARD END: ADD NOTES XTREE -->
 
   <br>
+  <!-- APP CARD START: COUNTER GAMES XTREE -->
+<div>
+  <!-- APP HEADER -->
+  <h3>🏆 Counter Games Xtree <kbd>V0.01</kbd></h3>
+  
+  <!-- APP DESCRIPTION -->
+  <p>
+    <strong>Counter Games Xtree</strong> is a comprehensive gaming achievement and progress tracking utility engineered for PICO-8. Built to maximize the utility of retro clone handheld consoles, this system allows you to keep detailed logs and custom counters of your milestones across multiple games. Featuring an upgraded virtual keyboard, 18 native languages, and deep visual customization, it stands as the most complete AI-assisted utility in the collection.
+  </p>
+
+  <!-- IMAGE GALLERY WITH VISIBLE SUBTITLES -->
+  <h4>📸 Screenshots</h4>
+  <table width="100%">
+    <tr>
+      <td align="center" width="33.3%">
+        <img src="assets/screenshot9.jpg" alt="Initial Setup Screen" width="100%">
+        <br><sub><b>Initial Setup</b></sub>
+      </td>
+      <td align="center" width="33.3%">
+        <img src="assets/screenshot10.jpg" alt="Main Menu Interface" width="100%">
+        <br><sub><b>Main Menu</b></sub>
+      </td>
+      <td align="center" width="33.3%">
+        <img src="assets/screenshot11.jpg" alt="Configuration System" width="100%">
+        <br><sub><b>Configuration System</b></sub>
+      </td>
+    </tr>
+    <tr>
+      <td width="33.3%"></td>
+      <td align="center" width="33.3%">
+        <img src="assets/screenshot12.jpg" alt="Demo Game Counter" width="100%">
+        <br><sub><b>Demo Game</b></sub>
+      </td>
+      <td width="33.3%"></td>
+    </tr>
+  </table>
+
+  <!-- KEY FEATURES SECTION -->
+  <h4>🌟 Core Features</h4>
+  <ul>
+    <li><strong>18-Language Native Support:</strong> Expanded multilingual engine supporting 18 distinct languages out of the box, with instant language switching from the options menu.</li>
+    <li><strong>Custom User Profile:</strong> Personalize your experience by entering your player username using a modernized, high-responsiveness virtual keyboard built for PICO-8.</li>
+    <li><strong>Game & Objective Tracking:</strong> Create entries for specific games and organize custom achievement categories inside each title, with the flexibility to add more objectives anytime.</li>
+    <li><strong>Interactive LED Confirmation System:</strong> Visual LED indicators light up when you complete an objective and confirm it with the action button (fully remappable to your preference).</li>
+    <li><strong>Dynamic UI Layouts & Auto-Themes:</strong> Choose between at least 4 distinct interface designs, switch color presets, or activate <strong>Auto-Theme</strong> to automatically adapt the color scheme to the selected game.</li>
+    <li><strong>Comprehensive Options Menu:</strong> Includes <strong>Zoom-UI</strong> for scaling the graphical interface, periodic motivational messages, frog mascot mood selector, button visualizer and remapping, and a full data wipe option.</li>
+  </ul>
+
+  <!-- SHORTCUTS SECTION -->
+  <h4>⌨️ Controls & Key Shortcuts</h4>
+  <ul>
+    <li><strong>A Button:</strong> Primary action button in the main menu (add new game) and adds <code>+1</code> to the selected counter inside a game.</li>
+    <li><strong>B Button:</strong> Subtracts <code>-1</code> from the currently selected objective counter.</li>
+    <li><strong>Right Arrow:</strong> Quickly enters the currently selected or newly created game from the main menu.</li>
+    <li><strong>Up / Down Arrows:</strong> Navigate smoothly through games, menu options, and objective indicators.</li>
+    <li><strong>B + Left Arrow:</strong> Opens the cinematic "About" screen from the main menu.</li>
+  </ul>
+</div>
+<!-- APP CARD END: COUNTER GAMES XTREE -->
+  <br>
 
   <!-- CHANGELOG DROPDOWN (Native HTML Accordion) -->
   <details>
