@@ -66,7 +66,7 @@
 <!-- APP CARD START: ADD NOTES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>📝 Add Notes Xtree <kbd>V0.04</kbd></h3>
+  <h3>📝 Add Notes Xtree <kbd>V0.05</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,7 +188,13 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.15 (Counter Games Xtree V0.01) - current version</h4>
+    <h4>Version 0.16 (Add Notes Xtree V0.05) - current version</h4>
+    <ul>
+      <li>A new feature is now available under additional options.</li>
+      <li>You can now view and configure a hotkey to quickly switch the virtual keyboard between letter mode and numeric mode, saving you time; the default setting is also saved.</li>
+      <li>Some minor bugs have been fixed.</li>
+    </ul>
+    <h4>Version 0.15 (Counter Games Xtree V0.01)</h4>
     <ul>
       <li>Here is a new application for PICO-8, designed for tracking progress in games. It is the most comprehensive tool I have created with the help of AI to help you keep better tabs on your in game achievements</li>
       <li>It includes support for 18 languages, which is a significant feature.</li>
