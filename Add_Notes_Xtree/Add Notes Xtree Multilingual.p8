@@ -2,13 +2,13 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.04]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.05]
 -- PARTE 1 DE 4: NÚCLEO DE INICIALIZACIÓN Y CONTROL DE FLUX
 -- =========================================================
 
 function _init()
   id_nombre = "ADD NOTES XTREE"
-  id_version = "V0.04"
+  id_version = "V0.05"
   
   -- MÁQUINA DE ESTADOS COMPATIBLE CON MIPS
   -- 0 = selector de idioma
@@ -114,6 +114,16 @@ function _init()
   frase_timer = 0
   -- control de columna para la opcion 0 (1 = idioma, 2 = herramienta)
   columna_menu_cero = 1
+
+  -- =========================================================
+  -- EXTENSIÓN MAPEO Y TESTEO DE BOTONES [SEGURA PARA PICANTE8]
+  -- =========================================================
+  sub_btn_abierta = false      -- controla si la subventana de botones está activa
+  sub_btn_cursor = 1         -- 1 = selector tecla abc/123, 2 = aplicar, 3 = rechazar
+  btn_teclado_modo = 0       -- 0 = L1/R1 (default), 1 = L1 (p2_b4), 2 = R1 (p2_b5), 3 = Select (p2_b2)
+  btn_teclado_temp = 0       -- copia temporal mientras se edita antes de aplicar/rechazar
+  ultimo_btn_reg = "ninguno" -- reporte técnico del último botón presionado
+  ultimo_btn_col = 5         -- color dinámico del indicador técnico
 end
 
 function _update()
@@ -216,7 +226,7 @@ function _update()
   end
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.04]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.05]
 -- PARTE 2 DE 4: DESPACHADOR DE COLOR Y SELECTORES INICIALES
 -- =========================================================
 
@@ -297,7 +307,7 @@ function render_selector_perfil()
   print("(a): ok", 48, 112, 10)
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.04]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.05]
 -- PARTE 3 DE 4: MENÚ DE NOTAS Y MASCOTA CON EXPRESIONES
 -- =========================================================
 
@@ -370,7 +380,7 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   rectfill(0, 0, 127, 11, c_display)
   line(0, 11, 127, 11, c_btn_txt)
   
-  print("ADD NOTES XTREE V0.04", 4, 3, c_txt_dis)
+  print("ADD NOTES XTREE V0.05", 4, 3, c_txt_dis)
   print(str_reloj, 94, 3, 5)
 
   local t_lang = textos_sistema[idioma_actual][6]  -- "notas creadas:"
@@ -599,35 +609,69 @@ end
 
 
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.04]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.05]
 -- PARTE 4 DE 4: TECLADO, VISOR, ACERCA DE Y PERSISTENCIA
 -- =========================================================
 
 function actualizar_teclado_virtual()
-  -- Movimiento seguro por la cuadrícula
+  -- 1. Primero evaluamos salida o combos B + Dirección (antes de mover el cursor)
+  if btn_teclado_modo == 0 then
+    if btnp(5) or stat(30) == 14 then
+      modo_actual = 2
+      cursor_menu = 1
+      bloqueo_a = false
+      return
+    end
+  else
+    local b_presionado = btn(5) or stat(30) == 14
+    local gatillo_capa = false
+
+    if btn_teclado_modo == 1 and b_presionado and btnp(2) then
+      gatillo_capa = true
+      combo_b_usado = true
+    elseif btn_teclado_modo == 2 and b_presionado and btnp(3) then
+      gatillo_capa = true
+      combo_b_usado = true
+    elseif btn_teclado_modo == 3 and b_presionado and btnp(0) then
+      gatillo_capa = true
+      combo_b_usado = true
+    elseif btn_teclado_modo == 4 and b_presionado and btnp(1) then
+      gatillo_capa = true
+      combo_b_usado = true
+    end
+
+    if gatillo_capa then
+      if teclado_mapa == teclado_mapa_letras then
+        teclado_mapa = teclado_mapa_simbolos
+      else
+        teclado_mapa = teclado_mapa_letras
+      end
+      return
+    end
+
+    -- Mientras B está oprimido espera el combo; si lo sueltas sin combo, sale al menú
+    if b_presionado then
+      b_estaba_activo = true
+      return
+    elseif b_estaba_activo then
+      b_estaba_activo = false
+      if not combo_b_usado then
+        modo_actual = 2
+        cursor_menu = 1
+        bloqueo_a = false
+        return
+      end
+      combo_b_usado = false
+    end
+  end
+
+  -- 2. Movimiento seguro por la cuadrícula (solo se ejecuta si B no está retenido)
   if btnp(0) then teclado_cx = (teclado_cx - 1) % teclado_max_cx end
   if btnp(1) then teclado_cx = (teclado_cx + 1) % teclado_max_cx end
   if btnp(2) then teclado_cy = (teclado_cy - 1) % teclado_max_cy end
   if btnp(3) then teclado_cy = (teclado_cy + 1) % teclado_max_cy end
 
-  -- [CORTAFUEGOS]: El botón B (5 o 14) sirve exclusivamente para salir sin gatillar el botón A
-  if btnp(5) or stat(30) == 14 then
-    modo_actual = 2
-    cursor_menu = 1
-    bloqueo_a = false
-    return
-  end
-
-  -- Cambio rápido de capa abc/123 con botones L1 o R1 del mando
-  if btnp(4, 1) or btnp(5, 1) then
-    if teclado_mapa == teclado_mapa_letras then
-      teclado_mapa = teclado_mapa_simbolos
-    else
-      teclado_mapa = teclado_mapa_letras
-    end
-  end
-
-  -- Selección estricta con el Botón A físico (Evita interferencias con el botón B)
+  -- 3. Selección estricta con el Botón A físico (Evita interferencias con el botón B)
   if (btn(4) or stat(30) == 13) and not (btn(5) or stat(30) == 14) then
     if not bloqueo_a then
       bloqueo_a = true 
@@ -677,6 +721,7 @@ function procesar_caracter_seguro(car)
     cursor_menu = 1
     nota_seleccionada_idx = nil
     bloqueo_a = true -- Evita el reingreso molesto
+    cooldown_teclado = 10 -- Escudo de 10 frames contra rebote tras escribir en SD
     return
     
   elseif car == "del" then
@@ -873,7 +918,7 @@ function render_pantalla_acercade()
     "--- " .. t_tit .. " ---",
     "",
     "app: add notes xtree",
-    t_ver .. " v0.04",
+    t_ver .. " v0.05",
     t_dev .. " martstartiv",
     t_ia .. " collaborative ai",
     "",
@@ -973,7 +1018,7 @@ function guardar_todo_en_sd()
     dset(3, #lista_notas) -- El Slot 3 vuelve a ser exclusivamente el total de notas como antes
     
     -- 2. Guardamos las nuevas configuraciones en el Slot 4 de forma aislada
-    local empaquetado_config = config_zoom + (config_motivacion * 10)
+    local empaquetado_config = config_zoom + (config_motivacion * 10) + (btn_teclado_modo * 100)
     dset(4, empaquetado_config)
     
     -- 3. Tu motor original exacto de volcado de caracteres por bloques a la SD
@@ -1026,11 +1071,13 @@ function cargar_configuracion_inicial()
     -- Recuperamos las opciones adicionales del Slot 4 sin interferir con las notas
     local empaquetado_config = dget(4) or 0
     config_zoom = empaquetado_config % 10
-    config_motivacion = flr(empaquetado_config / 10)
+    config_motivacion = flr((empaquetado_config % 100) / 10)
+    btn_teclado_modo = flr(empaquetado_config / 100)
     
     -- Escudos protectores por rango
     if config_zoom < 0 or config_zoom > 1 then config_zoom = 0 end
     if config_motivacion < 0 or config_motivacion > 1 then config_motivacion = 0 end
+    if btn_teclado_modo < 0 or btn_teclado_modo > 4 then btn_teclado_modo = 0 end
     
     -- [RECONSTRUCCIÓN REAL COMPATIBLE FIJA]: Recupera tus strings tal cual como antes
     for i = 1, total_g do
@@ -1061,8 +1108,14 @@ end
 
 
 function actualizar_opciones_adicionales()
-  if btnp(2) then config_cursor = config_cursor - 1 if config_cursor < 1 then config_cursor = 4 end end
-  if btnp(3) then config_cursor = config_cursor + 1 if config_cursor > 4 then config_cursor = 1 end end
+  -- Si está abierta la subventana de mapeo/testeo, le cedemos el control exclusivo
+  if sub_btn_abierta then
+    actualizar_subventana_botones()
+    return
+  end
+
+  if btnp(2) then config_cursor = config_cursor - 1 if config_cursor < 1 then config_cursor = 5 end end
+  if btnp(3) then config_cursor = config_cursor + 1 if config_cursor > 5 then config_cursor = 1 end end
 
   if btnp(5) or stat(30) == 14 then
     config_abierta = false
@@ -1080,7 +1133,6 @@ function actualizar_opciones_adicionales()
   elseif config_cursor == 3 then
     if btnp(0) or btnp(1) then
       config_motivacion = (config_motivacion == 0) and 1 or 0
-      -- [CORRECCIÓN CRÍTICA]: Enlace correcto al cronómetro real del sistema de expresiones
       if config_motivacion == 1 then estado_emocional = 4 cronometro_emocion = 0 end 
     end
     
@@ -1098,8 +1150,21 @@ function actualizar_opciones_adicionales()
       idx_tema = 1
       config_zoom = 0
       config_motivacion = 0
+      btn_teclado_modo = 0
       config_abierta = false
       modo_actual = 0 
+      return
+    end
+
+  elseif config_cursor == 5 then
+    -- Abre la subventana emergente de mapeo y testeo de botones
+    if btnp(4) or stat(30) == 13 then
+      sub_btn_abierta = true
+      sub_btn_cursor = 1
+      btn_teclado_temp = btn_teclado_modo
+      ultimo_btn_reg = "esperando..."
+      ultimo_btn_col = 5
+      bloqueo_a = true
       return
     end
   end
@@ -1107,21 +1172,21 @@ end
 
 function render_ventana_opciones_adicionales(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
   local t_config = {
-    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacion", "formatear", "si", "no", "b: salir/grv"},
-    {"extra cfgs",   "text zoom",  "lang/idioma", "motivation", "wipe clear", "yes","no", "b: exit/save"},
-    {"cfg. dodatk",  "zoom tekstu", "jezyk/lang", "motywacja",  "czyszczenie", "tak","nie","b: wyjdz/zap"},
-    {"dop. nastr",   "masshtab",   "yazik/lang",  "motivaciya", "ochistka",   "da", "net","b: vyhod/shran"},
-    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacao",  "formatar",   "sim","nao","b: sair/salv"},
-    {"cfg. extra",   "zoom testo", "lingua/lang", "motivazione","formatta",   "si", "no", "b: esci/salv"},
-    {"cfg. extras",  "zoom texte", "langue/lang", "motivation", "effacer to", "oui","non","b: sortir/grd"},
-    {"sono hoka",    "moji zoom",  "gengo/lang",  "douki zuke", "shokika",    "hai","iie","b: modoru/hoz"},
-    {"geng duo she", "zi ti da xiao","yu yan/lang","ji li",       "qing chu",   "shi","fou","b: tui chu/bao"},
-    {"gita seolt",   "geulja zoom","eoneo/lang",  "donggi buyeo","gongjang ch","ye", "ani","b: nagagi/jeo"},
-    {"ek ayarlar",   "metin zoomu", "dil/lang",    "motivasyon", "sifirla",    "evet","hayir","b: cikis/kayd"}
+    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacion", "formatear", "si", "no", "b: salir/grv", "map/test btn"},
+    {"extra cfgs",   "text zoom",  "lang/idioma", "motivation", "wipe clear", "yes","no", "b: exit/save", "btn map/test"},
+    {"cfg. dodatk",  "zoom tekstu", "jezyk/lang", "motywacja",  "czyszczenie", "tak","nie","b: wyjdz/zap", "map/test btn"},
+    {"dop. nastr",   "masshtab",   "yazik/lang",  "motivaciya", "ochistka",   "da", "net","b: vyhod/shran","test knopok"},
+    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacao",  "formatar",   "sim","nao","b: sair/salv", "map/test btn"},
+    {"cfg. extra",   "zoom testo", "lingua/lang", "motivazione","formatta",   "si", "no", "b: esci/salv", "map/test btn"},
+    {"cfg. extras",  "zoom texte", "langue/lang", "motivation", "effacer to", "oui","non","b: sortir/grd", "map/test btn"},
+    {"sono hoka",    "moji zoom",  "gengo/lang",  "douki zuke", "shokika",    "hai","iie","b: modoru/hoz", "btn map/test"},
+    {"geng duo she", "zi ti da xiao","yu yan/lang","ji li",       "qing chu",   "shi","fou","b: tui chu/bao","anjian ceshi"},
+    {"gita seolt",   "geulja zoom","eoneo/lang",  "donggi buyeo","gongjang ch","ye", "ani","b: nagagi/jeo", "beoteun teseu"},
+    {"ek ayarlar",   "metin zoomu", "dil/lang",    "motivasyon", "sifirla",    "evet","hayir","b: cikis/kayd","tus test/ayar"}
   }
 
   local m_data = t_config[idioma_actual]
-  local vx, vy, vw, vh = 12, 18, 104, 92
+  local vx, vy, vw, vh = 12, 13, 104, 104
   
   rectfill(vx, vy, vx + vw, vy + vh, 0)         
   rect(vx, vy, vx + vw, vy + vh, c_btn_bse)     
@@ -1129,25 +1194,25 @@ function render_ventana_opciones_adicionales(c_display, c_btn_bse, c_btn_txt, c_
   print(m_data[1], vx + 6, vy + 4, c_txt_dis)   
   
   -- Fila 1: Zoom de letra
-  local ly1 = vy + 18
+  local ly1 = vy + 17
   if config_cursor == 1 then rectfill(vx + 4, ly1 - 2, vx + vw - 4, ly1 + 6, c_btn_bse) end
   print(m_data[2] .. ":", vx + 6, ly1, config_cursor == 1 and c_btn_txt or c_txt_dis)
   print(config_zoom == 1 and "on" or "off", vx + 80, ly1, config_zoom == 1 and 10 or 8)
   
   -- Fila 2: Idioma rápido
-  local ly2 = vy + 34
+  local ly2 = vy + 32
   if config_cursor == 2 then rectfill(vx + 4, ly2 - 2, vx + vw - 4, ly2 + 6, c_btn_bse) end
   print(m_data[3] .. ":", vx + 6, ly2, config_cursor == 2 and c_btn_txt or c_txt_dis)
   print("<" .. codigos_idioma[idioma_actual] .. ">", vx + 74, ly2, 11)
   
   -- Fila 3: Motivación
-  local ly3 = vy + 50
+  local ly3 = vy + 47
   if config_cursor == 3 then rectfill(vx + 4, ly3 - 2, vx + vw - 4, ly3 + 6, c_btn_bse) end
   print(m_data[4] .. ":", vx + 6, ly3, config_cursor == 3 and c_btn_txt or c_txt_dis)
   print(config_motivacion == 1 and "on" or "off", vx + 80, ly3, config_motivacion == 1 and 10 or 8)
   
   -- Fila 4: Formateo de Fábrica
-  local ly4 = vy + 66
+  local ly4 = vy + 62
   if config_cursor == 4 then rectfill(vx + 4, ly4 - 2, vx + vw - 4, ly4 + 6, c_btn_bse) end
   print(m_data[5], vx + 6, ly4, config_cursor == 4 and c_btn_txt or 8)
   
@@ -1158,6 +1223,206 @@ function render_ventana_opciones_adicionales(c_display, c_btn_bse, c_btn_txt, c_
     rectfill(vx + 76, ly4 - 1, vx + 98, ly4 + 5, 12) 
     print(m_data[7], vx + 78, ly4, 7)
   end
+
+  -- Fila 5: Nueva opción de Mapeo y Testeo Técnico de Botones
+  local ly5 = vy + 77
+  if config_cursor == 5 then rectfill(vx + 4, ly5 - 2, vx + vw - 4, ly5 + 6, c_btn_bse) end
+  print(m_data[9], vx + 6, ly5, config_cursor == 5 and c_btn_txt or 11)
+  print("[>]", vx + 84, ly5, config_cursor == 5 and c_btn_txt or 10)
   
-  print(m_data[8], vx + 14, vy + 82, 6)
+  print(m_data[8], vx + 14, vy + 93, 6)
+
+  -- Si la subventana emergente de botones está activa, se dibuja encima
+  if sub_btn_abierta then
+    render_subventana_botones(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
+  end
+end
+
+
+-- =========================================================
+-- LÓGICA DE SUBVENTANA: MAPEO Y TESTEO TÉCNICO DE BOTONES
+-- =========================================================
+function actualizar_subventana_botones()
+  -- 1. Botón de retroceso por defecto (B) garantiza salida limpia sin guardar cambios
+  if btnp(5) or stat(30) == 14 then
+    sub_btn_abierta = false
+    bloqueo_a = false
+    return
+  end
+
+  -- 2. Detector técnico en tiempo real de pulsaciones para reporte visual
+  if btn(0) then ultimo_btn_reg = "p1:izq (id:0)" ultimo_btn_col = 12 end
+  if btn(1) then ultimo_btn_reg = "p1:der (id:1)" ultimo_btn_col = 12 end
+  if btn(2) then ultimo_btn_reg = "p1:arr (id:2)" ultimo_btn_col = 12 end
+  if btn(3) then ultimo_btn_reg = "p1:aba (id:3)" ultimo_btn_col = 12 end
+  if btn(4) then ultimo_btn_reg = "p1:btn a (id:4)" ultimo_btn_col = 11 end
+  if btn(0, 1) then ultimo_btn_reg = "p2:izq (id:0,1)" ultimo_btn_col = 10 end
+  if btn(1, 1) then ultimo_btn_reg = "p2:der (id:1,1)" ultimo_btn_col = 10 end
+  if btn(2, 1) then ultimo_btn_reg = "p2:sel/u (id:2,1)" ultimo_btn_col = 9 end
+  if btn(3, 1) then ultimo_btn_reg = "p2:str/d (id:3,1)" ultimo_btn_col = 9 end
+  if btn(4, 1) then ultimo_btn_reg = "p2:l1/x (id:4,1)" ultimo_btn_col = 14 end
+  if btn(5, 1) then ultimo_btn_reg = "p2:r1/y (id:5,1)" ultimo_btn_col = 14 end
+
+  -- 3. Navegación vertical: 1 = selector combo, 2 = fila de botones [aplicar / default / rechazar]
+  if btnp(2) or btnp(3) then
+    if sub_btn_cursor == 1 then
+      sub_btn_cursor = 2
+    else
+      sub_btn_cursor = 1
+    end
+  end
+
+  -- Cambiar asignación de botón con Izquierda / Derecha en la fila 1 (0 = default, 1..4 = combos)
+  if sub_btn_cursor == 1 then
+    if btnp(0) then
+      btn_teclado_temp = btn_teclado_temp - 1
+      if btn_teclado_temp < 0 then btn_teclado_temp = 4 end
+    end
+    if btnp(1) then
+      btn_teclado_temp = btn_teclado_temp + 1
+      if btn_teclado_temp > 4 then btn_teclado_temp = 0 end
+    end
+  else
+    -- Navegación horizontal entre [aplicar] (2), [default] (3) y [rechazar] (4)
+    if btnp(0) then
+      sub_btn_cursor = sub_btn_cursor - 1
+      if sub_btn_cursor < 2 then sub_btn_cursor = 4 end
+    end
+    if btnp(1) then
+      sub_btn_cursor = sub_btn_cursor + 1
+      if sub_btn_cursor > 4 then sub_btn_cursor = 2 end
+    end
+  end
+
+  -- 4. Confirmación con botón A (respetando bloqueo_a de entrada)
+  if btn(4) or stat(30) == 13 then
+    if not bloqueo_a then
+      bloqueo_a = true
+      if sub_btn_cursor == 2 then
+        -- APLICAR: Guarda la selección en RAM y en Slot 4 de SD
+        btn_teclado_modo = btn_teclado_temp
+        guardar_todo_en_sd()
+        aviso_texto = textos_sistema[idioma_actual][13] .. "!"
+        aviso_timer = 35
+        sub_btn_abierta = false
+      elseif sub_btn_cursor == 3 then
+        -- DEFAULT: Restaura el teclado a modo fábrica (0) y lo guarda sin borrar nada más
+        btn_teclado_temp = 0
+        btn_teclado_modo = 0
+        guardar_todo_en_sd()
+        aviso_texto = "default ok!"
+        aviso_timer = 35
+        sub_btn_abierta = false
+      elseif sub_btn_cursor == 4 then
+        -- RECHAZAR: Descarta cambios temporales y vuelve sin alterar lo guardado
+        sub_btn_abierta = false
+      end
+    end
+  else
+    bloqueo_a = false
+  end
+end
+
+function render_subventana_botones(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
+  local t_sub_btn = {
+    {"test & map btn", "tecla abc/123:", "monitor pulsac.:", "aplicar",  "rechazar", "b: volver sin grv"}, -- 1. es
+    {"btn map & test", "abc/123 key:",   "input monitor:",   "apply",    "reject",   "b: exit no save"},   -- 2. en
+    {"map/test przy.", "klaw. abc/123:", "monitor przyc.:",  "zastosuj", "odrzuc",   "b: wyjdz bez zap"},  -- 3. pl
+    {"test i karta",   "knopka abc/123:","monitor nazhat.:", "primenit", "otmenit",  "b: vyhod bez shr"},  -- 4. ru
+    {"map/test botoes","tecla abc/123:", "monitor teclas:",  "aplicar",  "rejeitar", "b: sair sem salv"},  -- 5. pt
+    {"map/test tasti", "tasto abc/123:", "monitor tasti:",   "applica",  "rifiuta",  "b: esci senza slv"}, -- 6. it
+    {"map/test bout.", "touche abc/123:","moniteur touch.:", "appliquer","rejeter",  "b: sortir ss grd"},  -- 7. fr
+    {"btn map & test", "abc/123 key:",   "nyuuryoku test:",  "tekiyou",  "kyohi",    "b: hozon sezu mod"}, -- 8. jp
+    {"anjian ceshi",   "abc/123 jian:",  "anjian jiankong:", "yingyong", "jujue",    "b: bu baocun tui"},  -- 9. cn
+    {"beoteun teseu",  "abc/123 ki:",    "ipryeok moniteo:", "jeokyong", "geobu",    "b: jeojang anham"},  -- 10. kr
+    {"tus test/ayar",  "abc/123 tusu:",  "tus monitoru:",    "uygula",   "reddet",   "b: kaydetsiz cik"}   -- 11. tr
+  }
+
+  local s_data = t_sub_btn[idioma_actual]
+  local sx, sy, sw, sh = 6, 10, 116, 108
+  local nombres_map = {"default", "b+arr", "b+aba", "b+izq", "b+der"}
+
+  -- Marco emergente principal
+  rectfill(sx, sy, sx + sw, sy + sh, 0)
+  rect(sx, sy, sx + sw, sy + sh, 11)
+  rectfill(sx + 2, sy + 2, sx + sw - 2, sy + 11, c_display)
+  print(s_data[1], sx + 6, sy + 4, 7)
+
+  -- Bloque 1: Selector de asignación para abc/123 en teclado virtual
+  local y_map = sy + 16
+  if sub_btn_cursor == 1 then
+    rectfill(sx + 4, y_map - 2, sx + sw - 4, y_map + 13, c_btn_bse)
+  else
+    rect(sx + 4, y_map - 2, sx + sw - 4, y_map + 13, 5)
+  end
+  print(s_data[2], sx + 7, y_map, sub_btn_cursor == 1 and c_btn_txt or 6)
+  print("< " .. nombres_map[btn_teclado_temp + 1] .. " >", sx + 62, y_map + 6, 10)
+
+  -- Bloque 2: Panel visual de testeo en tiempo real (indicadores por color)
+  local y_tst = sy + 34
+  rect(sx + 4, y_tst, sx + sw - 4, y_tst + 46, 5)
+  print(s_data[3], sx + 7, y_tst + 3, 7)
+
+  -- Cajas indicadoras P1 (D-Pad y A)
+  local function caja_btn(bx, by, txt, activo, col_on)
+    rectfill(bx, by, bx + 15, by + 8, activo and col_on or 1)
+    print(txt, bx + 2, by + 2, activo and 0 or 5)
+  end
+
+  caja_btn(sx + 7,  y_tst + 12, "izq", btn(0), 12)
+  caja_btn(sx + 25, y_tst + 12, "der", btn(1), 12)
+  caja_btn(sx + 43, y_tst + 12, "arr", btn(2), 12)
+  caja_btn(sx + 61, y_tst + 12, "aba", btn(3), 12)
+  caja_btn(sx + 79, y_tst + 12, " a ", btn(4), 11)
+  caja_btn(sx + 97, y_tst + 12, "b:x", false, 8) -- B reservado para volver
+
+  -- Cajas indicadoras P2 / Extra en libretro (L1, R1, Sel, Str, Aux)
+  caja_btn(sx + 7,  y_tst + 23, "l1 ", btn(4, 1), 14)
+  caja_btn(sx + 25, y_tst + 23, "r1 ", btn(5, 1), 14)
+  caja_btn(sx + 43, y_tst + 23, "sel", btn(2, 1), 9)
+  caja_btn(sx + 61, y_tst + 23, "str", btn(3, 1), 9)
+  caja_btn(sx + 79, y_tst + 23, "p2l", btn(0, 1), 10)
+  caja_btn(sx + 97, y_tst + 23, "p2r", btn(1, 1), 10)
+
+  -- Reporte técnico textual en vivo con color del último botón pulsado
+  print("reg: " .. ultimo_btn_reg, sx + 7, y_tst + 36, ultimo_btn_col)
+
+  -- Bloque 3: Tres botones inferiores [aplicar] (2) | [default] (3) | [rechazar] (4)
+  local y_acc = sy + 85
+
+  -- 1. Botón APLICAR (cursor 2)
+  local lbl_apl = sub(s_data[4], 1, 7)
+  local ax1 = sx + 22 - (#lbl_apl * 2)
+  if sub_btn_cursor == 2 then
+    rectfill(sx + 4, y_acc, sx + 39, y_acc + 10, 11)
+    print(lbl_apl, ax1, y_acc + 2, 0)
+  else
+    rect(sx + 4, y_acc, sx + 39, y_acc + 10, 3)
+    print(lbl_apl, ax1, y_acc + 2, 11)
+  end
+
+  -- 2. Botón DEFAULT (cursor 3)
+  local dx1 = sx + 58 - 14 -- centrado de "default" (7 chars * 2)
+  if sub_btn_cursor == 3 then
+    rectfill(sx + 41, y_acc, sx + 75, y_acc + 10, 10)
+    print("default", dx1, y_acc + 2, 0)
+  else
+    rect(sx + 41, y_acc, sx + 75, y_acc + 10, 9)
+    print("default", dx1, y_acc + 2, 10)
+  end
+
+  -- 3. Botón RECHAZAR (cursor 4)
+  local lbl_rec = sub(s_data[5], 1, 7)
+  local rx1 = sx + 94 - (#lbl_rec * 2)
+  if sub_btn_cursor == 4 then
+    rectfill(sx + 77, y_acc, sx + 112, y_acc + 10, 8)
+    print(lbl_rec, rx1, y_acc + 2, 7)
+  else
+    rect(sx + 77, y_acc, sx + 112, y_acc + 10, 2)
+    print(lbl_rec, rx1, y_acc + 2, 8)
+  end
+
+  -- Pie de ventana centrado dinámicamente según longitud del idioma
+  local px = 64 - (#s_data[6] * 2)
+  print(s_data[6], px, sy + 99, 6)
 end
