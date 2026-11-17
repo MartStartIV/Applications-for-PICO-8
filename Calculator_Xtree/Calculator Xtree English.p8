@@ -2,14 +2,14 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.10]
+-- CALCULATOR XTREE FORCE [v0.11]
 -- PARTE 1: CORE DE INICIALIZACIÓN Y CONFIGURACIÓN DE GRIDS
 -- =========================================================
 
 function _init()
   -- Información del Sistema
   id_nombre = "XTREE FORCE"
-  id_version = "V0.10"
+  id_version = "V0.11"
   
   -- Modos de Ejecución (0: Estándar, 1: Científico, 2: Acerca de, 3: Historial)
   modo_actual = 0 
@@ -201,7 +201,7 @@ function _init()
 
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.10]
+-- CALCULATOR XTREE FORCE [v0.11]
 -- PARTE 2: LÓGICA DE ACTUALIZACIÓN, COMBOS Y REFRESH DE HORA
 -- =========================================================
 
@@ -230,6 +230,24 @@ function _update60()
     return
   elseif modo_actual == 7 then 
     actualizar_cinematica_beso_naves() 
+    return
+  elseif modo_actual == 8 then 
+    actualizar_logica_snake() 
+    return
+  elseif modo_actual == 9 then 
+    actualizar_cinematica_beso_snake() 
+    return
+  elseif modo_actual == 10 then 
+    actualizar_logica_catch() 
+    return
+  elseif modo_actual == 11 then 
+    actualizar_cinematica_beso_catch() 
+    return
+  elseif modo_actual == 12 then 
+    actualizar_logica_tetris() 
+    return
+  elseif modo_actual == 13 then 
+    actualizar_cinematica_beso_tetris() 
     return
   end
 
@@ -352,7 +370,7 @@ function _update60()
   end
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.10]
+-- CALCULATOR XTREE FORCE [v0.11]
 -- PARTE 3: LÓGICA DE NAVEGACIÓN Y PROCESAMIENTO DEL HISTORIAL
 -- =========================================================
 
@@ -464,16 +482,22 @@ function registrar_en_historial(str_resultado)
   
   ops_totales = ops_totales + 1
 
-  -- Interceptor Operación 400: El Gato
+  -- Sistema Central de Desbloqueo de Minijuegos por Hitos de Registro
   if ops_totales == 400 then
-    modo_actual = 4       
-    ani_gato_frames = 0   
-    estado_beso = 120     
-  -- Interceptor Operación 520: Juego de Naves
+    modo_actual = 4       -- Cinemática Gato
+    ani_gato_frames = 0   estado_beso = 120     
   elseif ops_totales == 520 then
-    modo_actual = 7       -- Estado 7: Cinemática de invitación para las Naves
-    ani_gato_frames = 0   
-    estado_beso = 120     
+    modo_actual = 7       -- Cinemática Naves
+    ani_gato_frames = 0   estado_beso = 120     
+  elseif ops_totales == 630 then
+    modo_actual = 9       -- Cinemática Snake
+    ani_gato_frames = 0   estado_beso = 120
+  elseif ops_totales == 790 then
+    modo_actual = 11      -- Cinemática Catch
+    ani_gato_frames = 0   estado_beso = 120
+  elseif ops_totales == 980 then
+    modo_actual = 13      -- Cinemática Tetris
+    ani_gato_frames = 0   estado_beso = 120
   end
   
   if ops_totales == 0 and borrados_seguidos >= 2 then
@@ -518,7 +542,7 @@ end
 
 
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.10]
+-- CALCULATOR XTREE FORCE [v0.11]
 -- PARTE 4: MOTOR GRÁFICO AISLADO Y MÓDULO RENDER
 -- =========================================================
 
@@ -548,7 +572,35 @@ function _draw()
     render_cinematica_beso_central_naves(c_fondo)
     return
   end
+
+  -- Juego de Xtree Snake 
+  if modo_actual == 8 then
+    render_pantalla_snake(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+    return
+  elseif modo_actual == 9 then
+    render_cinematica_beso_central_snake(c_fondo)
+    return
+  end
+
+  -- Juego de Catch 
+  if modo_actual == 10 then
+    render_pantalla_catch(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+    return
+  elseif modo_actual == 11 then
+    render_cinematica_beso_central_catch(c_fondo)
+    return
+  end
+
+  -- Juego de Mini Tetris 
+  if modo_actual == 12 then
+    render_pantalla_tetris(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+    return
+  elseif modo_actual == 13 then
+    render_cinematica_beso_central_tetris(c_fondo)
+    return
+  end
   
+
   -- AISLAMIENTO TOTAL 1: Modo Acerca de
   if modo_actual == 2 then
     cls(0) rect(0, 0, 127, 127, 7) clip(4, 12, 120, 96)
@@ -601,7 +653,7 @@ function _draw()
     
     rectfill(0, 102, 127, 127, 0)
     line(0, 102, 127, 102, 6)
-    print("\x8b\x91:choose (\x94):return", 4, 106, 7)
+    print("\x8b\x91:elije (\x94):volver", 4, 106, 7)
     print("Press A: load | Press B + up: delete", 4, 115, 5)
     print("ops:"..ops_totales, 94, 106, 10)
     
@@ -690,7 +742,7 @@ function _draw()
   render_ranita_xtree(ranita_x, ranita_y)
 end
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.10]
+-- CALCULATOR XTREE FORCE [v0.11]
 -- PARTE 5: CONTROL EMOCIONAL Y DIBUJO DE LA MASCOTA
 -- =========================================================
 
@@ -788,7 +840,7 @@ end
 
 
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.10]
+-- CALCULATOR XTREE FORCE [v0.11]
 -- PARTE 6: PROCESADOR MATEMÁTICO Y PARSEO DE ENTRADA (REPARADO)
 -- =========================================================
 
@@ -1229,7 +1281,7 @@ function render_pantalla_gato(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_tx
     print("press A: play again", 16, 105, c_p)
     print("press b: return to calc", 14, 115, 5)
   else
-    print("\x8b\x91\x94\x83:move and A:confirm", 4, 105, 7)
+    print("\x8b\x91\x94\x83:move  (a):confirm", 4, 105, 7)
     print("Press b: exit to the calculator", 14, 115, 5)
   end
 
@@ -1238,7 +1290,7 @@ function render_pantalla_gato(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_tx
 end
 
 -- =========================================================
--- CALCULATOR XTREE FORCE [v0.10]
+-- CALCULATOR XTREE FORCE [v0.11]
 -- PARTE 7: MINIJUEGO DE NAVES ENCAPSULADO (MIPS-SAFE)
 -- =========================================================
 
@@ -1356,7 +1408,7 @@ function render_pantalla_naves(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_t
   
   -- Marcador de Estado
   if gato_estado == "gana_user" then
-    print("900 points! You won", 32, 18, 11)
+    print("¡900 pts! you won", 32, 18, 11)
   elseif gato_estado == "muerto" then
     print("destroyed ship", 36, 18, 8)
   else
@@ -1394,9 +1446,311 @@ function render_pantalla_naves(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_t
     print("press A: retry", 24, 105, c_p)
     print("Press b: exit to calc", 18, 115, 5)
   else
-    print("\x8b\x91:move  A:shoot", 14, 105, 7)
+    print("\x8b\x91:move  (a):shoot", 14, 105, 7)
     print("Press b: exit to the calculator", 14, 115, 5)
   end
 
+  render_ranita_xtree(114, 114)
+end
+
+-- =========================================================
+-- CALCULATOR XTREE FORCE [v0.09]
+-- PARTE 7: SECUENCIA DE MINIJUEGOS AISLADOS (BLOQUE 1 de 3)
+-- MÓDULO EXCLUSIVO: XTREE SNAKE (VÍBORA) - 630 CÁLCULOS
+-- =========================================================
+
+function iniciar_snake_ranita()
+  -- gato_tablero almacena la serpiente como una lista de coordenadas empaquetadas (x + y*256)
+  -- gato_tablero = cabeza, gato_tablero = manzana {x, y}, gato_tablero = dirección {dx, dy}
+  gato_tablero = {}
+  for i=1,30 do gato_tablero[i] = 0 end -- Limpieza de buffer de cuerpo
+  gato_tablero = 8 + 8 * 256 -- Posición inicial en rejilla 15x15 interna
+  gato_tablero = {4 + flr(rnd(7)), 4 + flr(rnd(7))} -- Manzana inicial
+  gato_tablero = {1, 0} -- Dirección inicial: Derecha
+  gato_cx = 2 -- Largo de la serpiente (Score)
+  gato_cy = 0 -- Temporizador de frames para control de velocidad constante
+  gato_estado = ""
+  modo_actual = 8
+end
+
+function actualizar_cinematica_beso_snake()
+  ani_gato_frames = ani_gato_frames + 1 
+  estado_beso = 90
+  if ani_gato_frames >= 120 then 
+    ops_totales = 631 
+    dset(1, ops_totales) 
+    estado_beso = 0 
+    iniciar_snake_ranita() 
+  end
+end
+
+function actualizar_logica_snake()
+  if btnp(5) then modo_actual = 0 sfx(0) return end
+  if gato_estado != "" then if btnp(4) then iniciar_snake_ranita() end return end
+
+  -- Captura de dirección (Evita girar en 180 grados sobre sí misma)
+  local dir = gato_tablero
+  if btnp(0) and dir == 0 then gato_tablero = {-1, 0}
+  elseif btnp(1) and dir == 0 then gato_tablero = {1, 0}
+  elseif btnp(2) and dir == 0 then gato_tablero = {0, -1}
+  elseif btnp(3) and dir == 0 then gato_tablero = {0, 1} end
+
+  -- Control de velocidad (MIPS-Safe: se mueve cada 7 frames)
+  gato_cy = gato_cy + 1
+  if gato_cy < 7 then return else gato_cy = 0 end
+
+  -- Mover cuerpo
+  for i = gato_cx, 2, -1 do gato_tablero[i] = gato_tablero[i-1] end
+
+  -- Mover cabeza
+  local cab_x = gato_tablero % 256
+  local cab_y = flr(gato_tablero / 256)
+  cab_x = cab_x + gato_tablero
+  cab_y = cab_y + gato_tablero
+
+  -- Colisión de bordes o morderse a sí misma (Límite rejilla 0 a 14)
+  if cab_x < 0 or cab_x > 14 or cab_y < 0 or cab_y > 14 then gato_estado = "muerto" tocar_sfx(1) return end
+  for i = 2, gato_cx do
+    if gato_tablero[i] == (cab_x + cab_y * 256) then gato_estado = "muerto" tocar_sfx(1) return end
+  end
+
+  gato_tablero = cab_x + cab_y * 256
+
+  -- Colisión con Manzana
+  local mz = gato_tablero
+  if cab_x == mz and cab_y == mz then
+    gato_cx = min(gato_cx + 1, 30)
+    tocar_sfx(2)
+    if gato_cx >= 15 then gato_estado = "gana_user" return end -- Gana al llegar a largo 15
+    gato_tablero = {flr(rnd(14)), flr(rnd(14))}
+  end
+end
+
+function render_cinematica_beso_central_snake(c_fondo)
+  cls(c_fondo) rect(2, 2, 125, 125, 10) rectfill(4, 4, 123, 14, 0)
+  print("¡reptile challenge!", 40, 7, 7) render_ranita_xtree(58, 54 + flr(sin(ranita_anim / 30) * 2))
+  print("you have awakened the", 26, 94, 7) print("snake xtree! <3", 32, 103, 11)
+end
+
+function render_pantalla_snake(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+  cls(c_fondo) rectfill(0, 0, 127, 13, c_display) line(0, 13, 127, 13, c_btn_txt)
+  print("xtree snake arcade", 28, 4, c_txt_dis)
+  if gato_estado == "gana_user" then print("¡filled! pro", 34, 18, 11)
+  elseif gato_estado == "muerto" then print("game over", 34, 18, 8)
+  else print("long: "..gato_cx.." / 15", 36, 18, c_btn_txt) end
+  local ox, oy = 34, 32 rectfill(ox, oy, ox + 60, oy + 60, c_display) rect(ox, oy, ox + 60, oy + 60, c_btn_bse)
+  
+  -- Dibujar Manzana
+  rectfill(ox + gato_tablero*4, oy + gato_tablero*4, ox + gato_tablero*4 + 3, oy + gato_tablero*4 + 3, 8)
+  
+  -- Dibujar Serpiente
+  for i=1, gato_cx do
+    if gato_tablero[i] != 0 then
+      local sx = ox + (gato_tablero[i] % 256) * 4
+      local sy = oy + flr(gato_tablero[i] / 256) * 4
+      rectfill(sx, sy, sx + 3, sy + 3, i == 1 and 11 or 3)
+    end
+  end
+  rectfill(0, 100, 127, 127, 0) line(0, 100, 127, 100, 6)
+  print(gato_estado != "" and "a: reboot | b: calculator" or "directional pad: rotate | b: exit", 8, 108, 7)
+  render_ranita_xtree(114, 114)
+end
+
+-- =========================================================
+-- CALCULATOR XTREE FORCE [v0.09]
+-- PARTE 8: SECUENCIA DE MINIJUEGOS AISLADOS (BLOQUE 2 de 3)
+-- MÓDULO EXCLUSIVO: FROGGY CATCH (ATRAPASUEÑOS) - 790 CÁLCULOS
+-- =========================================================
+
+function iniciar_catch_ranita()
+  -- gato_tablero = Cesta/Jugador {x, 0, 0}
+  -- gato_tablero = Objeto cayendo {x, y, velocidad}
+  gato_tablero = { {64, 0, 0}, {38 + flr(rnd(40)), 32, 1} }
+  gato_cx = 0 -- Puntuación acumulada
+  gato_estado = ""
+  modo_actual = 10
+end
+
+function actualizar_cinematica_beso_catch()
+  ani_gato_frames = ani_gato_frames + 1 
+  estado_beso = 90
+  if ani_gato_frames >= 120 then 
+    ops_totales = 791 
+    dset(1, ops_totales) 
+    estado_beso = 0 
+    iniciar_catch_ranita() 
+  end
+end
+
+function actualizar_logica_catch()
+  if btnp(5) then modo_actual = 0 sfx(0) return end
+  if gato_estado != "" then if btnp(4) then iniciar_catch_ranita() end return end
+
+  -- Mover cesta (Límites fijos de pantalla central: 34 a 82)
+  if btn(0) and gato_tablero > 34 then gato_tablero = gato_tablero - 2 end
+  if btn(1) and gato_tablero < 82 then gato_tablero = gato_tablero + 2 end
+
+  -- Caída constante del objeto corazón
+  gato_tablero = gato_tablero + gato_tablero
+  
+  -- Colisión con el suelo (Y >= 86) o captura exitosa
+  if gato_tablero >= 86 then
+    if abs(gato_tablero - gato_tablero) < 8 then
+      gato_cx = gato_cx + 100
+      tocar_sfx(2)
+      if gato_cx >= 900 then gato_estado = "gana_user" return end
+      
+      -- Reaparición con incremento leve de velocidad progresiva (MIPS-Safe)
+      gato_tablero = { 36 + flr(rnd(44)), 32, min(gato_tablero + 0.3, 3) }
+    else
+      gato_estado = "muerto" 
+      tocar_sfx(1)
+    end
+  end
+end
+
+function render_cinematica_beso_central_catch(c_fondo)
+  cls(c_fondo) rect(2, 2, 125, 125, 14) rectfill(4, 4, 123, 14, 0)
+  print("¡collector of love!", 30, 7, 7) render_ranita_xtree(58, 54 + flr(sin(ranita_anim / 30) * 2))
+  print("captures hearts", 24, 94, 7) print("of the little frog! <3", 32, 103, 10)
+end
+
+function render_pantalla_catch(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+  cls(c_fondo) rectfill(0, 0, 127, 13, c_display) line(0, 13, 127, 13, c_btn_txt)
+  print("froggy catch pro", 30, 4, c_txt_dis)
+  
+  if gato_estado == "gana_user" then print("Caught! Victory.", 30, 18, 11)
+  elseif gato_estado == "muerto" then print("My heart sank", 30, 18, 8)
+  else print("points: "..gato_cx.." / 900", 28, 18, c_btn_txt) end
+  
+  local ox, oy = 34, 32 rectfill(ox, oy, ox + 60, oy + 60, c_display) rect(ox, oy, ox + 60, oy + 60, c_btn_bse)
+  
+  -- Dibujar corazón cayendo en el display central
+  if gato_estado == "" then 
+    pset(gato_tablero, gato_tablero, 8) 
+    pset(gato_tablero + 1, gato_tablero, 8) 
+    pset(gato_tablero, gato_tablero + 1, 8) 
+  end
+  
+  -- Dibujar cesta recolectora del jugador
+  rectfill(gato_tablero, 88, gato_tablero + 10, 90, 11)
+  
+  rectfill(0, 100, 127, 127, 0) line(0, 100, 127, 100, 6)
+  print(gato_estado != "" and "a: play again" or "\x8b\x91: move basket", 16, 108, 7)
+  render_ranita_xtree(114, 114)
+end
+
+-- =========================================================
+-- CALCULATOR XTREE FORCE [v0.09]
+-- PARTE 9: SECUENCIA DE MINIJUEGOS AISLADOS (BLOQUE 3 de 3)
+-- MÓDULO EXCLUSIVO: MINI TETRIS MASTER - 980 CÁLCULOS
+-- =========================================================
+
+function iniciar_tetris_ranita()
+  -- gato_tablero contendrá las 10 líneas de la matriz física comprimida
+  gato_tablero = {}
+  for i=1,10 do gato_tablero[i] = 0 end
+  gato_cx = 4 -- Pieza activa X
+  gato_cy = 0 -- Pieza activa Y
+  gato_estado = ""
+  memoria = 0   -- Usamos la variable nativa 'memoria' como el score de líneas limpiadas
+  delay_historial = 0 -- Reloj interno de caída libre
+  modo_actual = 12
+end
+
+function actualizar_cinematica_beso_tetris()
+  ani_gato_frames = ani_gato_frames + 1 
+  estado_beso = 90
+  if ani_gato_frames >= 120 then 
+    ops_totales = 981 
+    dset(1, ops_totales) 
+    estado_beso = 0 
+    iniciar_tetris_ranita() 
+  end
+end
+
+function actualizar_logica_tetris()
+  if btnp(5) then modo_actual = 0 sfx(0) return end
+  if gato_estado != "" then if btnp(4) then iniciar_tetris_ranita() end return end
+
+  -- Control lateral de la pieza cuadrada (Rejilla de 6x10 bloques de 10x6px)
+  if btnp(0) and gato_cx > 0 then gato_cx = gato_cx - 1 sfx(3) end
+  if btnp(1) and gato_cx < 5 then gato_cx = gato_cx + 1 sfx(3) end
+
+  delay_historial = delay_historial + 1
+  if delay_historial >= 15 or btn(3) then -- Caída automática o forzada con Flecha Abajo
+    delay_historial = 0
+    
+    -- Checar colisión con bloques consolidados abajo o fondo
+    local sig_y = gato_cy + 1
+    local bloqueado = false
+    if sig_y > 9 then bloqueado = true
+    else
+      -- Comprobamos máscaras de bits binarias de la rejilla para colisión estricta MIPS
+      if (gato_tablero[sig_y + 1] & (1 << gato_cx)) != 0 then bloqueado = true end
+    end
+
+    if bloqueado then
+      -- Consolidar la pieza activa dentro de la matriz
+      gato_tablero[gato_cy + 1] = gato_tablero[gato_cy + 1] | (1 << gato_cx)
+      tocar_sfx(2)
+
+      -- Chequeo estricto de Game Over (Si se consolida en la línea superior 0)
+      if gato_cy == 0 then gato_estado = "muerto" tocar_sfx(1) return end
+
+      -- Revisar líneas completas (Todos los 6 bits encendidos = 63 en binario)
+      for l = 1, 10 do
+        if gato_tablero[l] == 63 then
+          memoria = memoria + 1
+          tocar_sfx(3)
+          if memoria >= 5 then gato_estado = "gana_user" return end -- Gana al limpiar 5 líneas
+          -- Desplazar líneas superiores hacia abajo
+          for d = l, 2, -1 do gato_tablero[d] = gato_tablero[d-1] end
+          gato_tablero = 0
+        end
+      end
+      
+      -- Respawn de una nueva pieza arriba
+      gato_cx = 3 gato_cy = 0
+    else
+      gato_cy = sig_y
+    end
+  end
+end
+
+function render_cinematica_beso_central_tetris(c_fondo)
+  cls(c_fondo) rect(2, 2, 125, 125, 12) rectfill(4, 4, 123, 14, 0)
+  print("¡Blocks of Olympus!", 24, 7, 7) render_ranita_xtree(58, 54 + flr(sin(ranita_anim / 30) * 2))
+  print("the great final puzzle", 24, 94, 7) print("it has begun! <3", 34, 103, 11)
+end
+
+function render_pantalla_tetris(c_fondo, c_display, c_txt_dis, c_btn_bse, c_btn_txt)
+  cls(c_fondo) rectfill(0, 0, 127, 13, c_display) line(0, 13, 127, 13, c_btn_txt)
+  print("mini tetris master", 26, 4, c_txt_dis)
+  
+  if gato_estado == "gana_user" then print("¡master of order!", 28, 18, 11)
+  elseif gato_estado == "muerto" then print("block overflow", 16, 18, 8)
+  else print("lineas: "..memoria.." / 5", 36, 18, c_btn_txt) end
+  
+  local ox, oy = 34, 32 rectfill(ox, oy, ox + 60, oy + 60, c_display) rect(ox, oy, ox + 60, oy + 60, c_btn_bse)
+  
+  -- Renderizar rejilla consolidada (6 columnas x 10 filas)
+  for y = 0, 9 do
+    for x = 0, 5 do
+      if (gato_tablero[y + 1] & (1 << x)) != 0 then
+        rectfill(ox + x*10, oy + y*6, ox + x*10 + 9, oy + y*6 + 5, 4)
+        rect(ox + x*10, oy + y*6, ox + x*10 + 9, oy + y*6 + 5, 5)
+      end
+    end
+  end
+  
+  -- Renderizar bloque cayendo activo
+  if gato_estado == "" then
+    rectfill(ox + gato_cx*10, oy + gato_cy*6, ox + gato_cx*10 + 9, oy + gato_cy*6 + 5, 10)
+    rect(ox + gato_cx*10, oy + gato_cy*6, ox + gato_cx*10 + 9, oy + gato_cy*6 + 5, 7)
+  end
+  
+  rectfill(0, 100, 127, 127, 0) line(0, 100, 127, 100, 6)
+  print("\x8b\x91: move | \x83: go down quickly", 14, 108, 7)
   render_ranita_xtree(114, 114)
 end
