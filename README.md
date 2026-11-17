@@ -19,7 +19,7 @@
 <!-- APP CARD START -->
 <div>
   <!-- APP HEADER -->
-  <h3>🧮 Calculator Xtree <kbd>V0.10</kbd></h3>
+  <h3>🧮 Calculator Xtree <kbd>V0.11</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,6 +188,11 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
+    <h4>Version 0.17 (Calculator Xtree V0.11) - current version</h4>
+    <ul>
+      <li>Three additional mini-games have been added; the little frog will now invite you to play different games as you continue using the app, provided you haven’t cleared your history.</li>
+      <li>Some issues have been resolved.</li>
+    </ul>
     <h4>Version 0.16 (Add Notes Xtree V0.05) - current version</h4>
     <ul>
       <li>A new feature is now available under additional options.</li>
