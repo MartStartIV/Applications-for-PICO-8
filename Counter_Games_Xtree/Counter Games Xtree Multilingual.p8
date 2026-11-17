@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.01]
+-- proyecto: counter games xtree [v0.02]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.01"
+  app_ver = "v0.02"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -322,6 +322,8 @@ function _init()
   }
   animo_timer = 0
   boot_ok = false
+  cat_anim_y = 0
+  cat_anim_x = 0
 end
 -- =========================================================
 -- parte 2a: motor de guardado instantaneo (sin pcall)
@@ -574,6 +576,8 @@ function _update()
   if trans_t > 0 then trans_t = trans_t - 1 end
   if modal_anim > 0 then modal_anim = modal_anim - 1 end
   if bloqueo_input > 0 then bloqueo_input = bloqueo_input - 1 end
+  if abs(cat_anim_y) > 0.5 then cat_anim_y = cat_anim_y * 0.65 else cat_anim_y = 0 end
+  if abs(cat_anim_x) > 0.5 then cat_anim_x = cat_anim_x * 0.65 else cat_anim_x = 0 end
 
   if led_anim > 0 then
     led_anim = led_anim + 2
@@ -1004,18 +1008,41 @@ function actualizar_categorias_juego()
   end
 
   local tot_c = #g.cats
-  if btnp(2) then
+  local prev_c = cat_cursor
+  local es_moderno = (ui_estilo == 2 or ui_estilo == 3)
+  local btn_prev = (ui_estilo == 3) and btnp(0) or btnp(2)
+  local btn_next = (ui_estilo == 3) and btnp(1) or btnp(3)
+
+  if es_moderno and ui_estilo == 3 then
+    if btnp(2) then cat_cursor = 0 end
+    if btnp(3) and cat_cursor == 0 and tot_c > 0 then cat_cursor = 1 end
+  end
+
+  if btn_prev then
     cat_cursor = cat_cursor - 1
     if cat_cursor < 0 then cat_cursor = tot_c end
-  elseif btnp(3) then
+    if cat_cursor != prev_c then
+      cat_anim_y = -28
+      cat_anim_x = -48
+    end
+  elseif btn_next then
     cat_cursor = cat_cursor + 1
     if cat_cursor > tot_c then cat_cursor = 0 end
+    if cat_cursor != prev_c then
+      cat_anim_y = 28
+      cat_anim_x = 48
+    end
+  end
+
+  local vis = 5
+  if es_moderno then
+    vis = (ui_zoom == 1) and 1 or 2
   end
 
   if cat_cursor <= cat_scroll and cat_cursor > 0 then
     cat_scroll = cat_cursor - 1
-  elseif cat_cursor > cat_scroll + 5 then
-    cat_scroll = cat_cursor - 5
+  elseif cat_cursor > cat_scroll + vis then
+    cat_scroll = cat_cursor - vis
   elseif cat_cursor == 0 then
     cat_scroll = 0
   end
@@ -1067,6 +1094,7 @@ function actualizar_categorias_juego()
     end
   end
 end
+
 
 function actualizar_opciones()
   -- 1. Si esta abierta la confirmacion de Borrar Todo
@@ -1316,7 +1344,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.01", 12, 7, 7)
+  print("counter games xtree v0.02", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -1402,26 +1430,43 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
         rectfill(cx, cy, cx + 58, cy + 30, sel and c_acc or c_pan)
         rect(cx, cy, cx + 58, cy + 30, sel and 7 or c_acc)
         dibujar_portada_aislada(cx + 3, cy + 3, gen, c_acc, c_txt)
-        print(sub(mis_juegos[i].nombre, 1, 8), cx + 23, cy + 6, sel and c_atxt or c_txt)
-        print(#mis_juegos[i].cats .. " cats", cx + 23, cy + 16, sel and c_atxt or 11)
+        if ui_zoom == 1 then
+          print("\^w" .. sub(mis_juegos[i].nombre, 1, 4), cx + 23, cy + 8, sel and c_atxt or c_txt)
+          local lbl_c = #mis_juegos[i].cats .. " " .. sub(tr(5), 1, 8)
+          print(lbl_c, cx + 4, cy + 23, sel and c_atxt or 11)
+        else
+          print(sub(mis_juegos[i].nombre, 1, 8), cx + 23, cy + 6, sel and c_atxt or c_txt)
+          local lbl_c = #mis_juegos[i].cats .. " " .. sub(tr(5), 1, 5)
+          print(lbl_c, cx + 23, cy + 16, sel and c_atxt or 11)
+        end
       end
 
-    elseif ui_estilo == 3 then
+     elseif ui_estilo == 3 then
       for i = 1, #mis_juegos do
         local mx = 20 + (i - 1) * 29
-        local my = 66
+        local my = 62
         local sel = (juego_sel == i + 1)
-        circfill(mx, my, sel and 13 or 11, sel and c_acc or c_pan)
-        circ(mx, my, sel and 13 or 11, sel and 7 or c_acc)
-        print(sub(mis_juegos[i].nombre, 1, 3), mx - 5, my - 2, sel and c_atxt or c_txt)
+        local rad = (ui_zoom == 1) and (sel and 14 or 12) or (sel and 13 or 11)
+        circfill(mx, my, rad, sel and c_acc or c_pan)
+        circ(mx, my, rad, sel and 7 or c_acc)
+        if ui_zoom == 1 then
+          print("\^w" .. sub(mis_juegos[i].nombre, 1, 2), mx - 8, my - 2, sel and c_atxt or c_txt)
+        else
+          print(sub(mis_juegos[i].nombre, 1, 3), mx - 5, my - 2, sel and c_atxt or c_txt)
+        end
       end
       local idx_g = max(1, juego_sel - 1)
       if mis_juegos[idx_g] then
-        rectfill(6, 86, 121, 108, c_pan)
-        rect(6, 86, 121, 108, c_acc)
-        dibujar_portada_aislada(9, 88, gen, c_acc, c_txt)
-        print(sub(mis_juegos[idx_g].nombre, 1, 18), 30, 91, 7)
-        print(tr(20), 30, 100, 11)
+        rectfill(6, 82, 121, 108, c_pan)
+        rect(6, 82, 121, 108, c_acc)
+        dibujar_portada_aislada(9, 86, gen, c_acc, c_txt)
+        if ui_zoom == 1 then
+          print("\^w" .. sub(mis_juegos[idx_g].nombre, 1, 10), 30, 88, 7)
+          print(sub(tr(20), 1, 21), 30, 99, 11)
+        else
+          print(sub(mis_juegos[idx_g].nombre, 1, 18), 30, 88, 7)
+          print(sub(tr(20), 1, 21), 30, 99, 11)
+        end
       end
 
     else
@@ -1432,8 +1477,13 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
         for v = 1, #mis_juegos[i].vals do tot_pts = tot_pts + mis_juegos[i].vals[v] end
         rectfill(4, ly, 123, ly + 13, sel and c_acc or 0)
         rect(4, ly, 123, ly + 13, c_acc)
-        print("#" .. i .. " " .. sub(mis_juegos[i].nombre, 1, 12), 7, ly + 4, sel and c_atxt or c_txt)
-        print("[" .. tot_pts .. "]", 92, ly + 4, sel and c_atxt or 10)
+        if ui_zoom == 1 then
+          print("\^w" .. sub(mis_juegos[i].nombre, 1, 8), 7, ly + 4, sel and c_atxt or c_txt)
+          print("\^w" .. tot_pts, 120 - (#tostr(tot_pts) * 8), ly + 4, sel and c_atxt or 10)
+        else
+          print("#" .. i .. " " .. sub(mis_juegos[i].nombre, 1, 12), 7, ly + 4, sel and c_atxt or c_txt)
+          print("[" .. tot_pts .. "]", 92, ly + 4, sel and c_atxt or 10)
+        end
       end
     end
   end
@@ -1443,6 +1493,7 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
   print(tr(20), 3, 118, 6)
   dibujar_ranita(112, 114)
 end
+
 -- =========================================================
 -- parte 6a: teclado moderno, buscador y pantalla de categorias
 -- =========================================================
@@ -1504,6 +1555,29 @@ end
 
 
 
+function dibujar_num_grande(txt, x, y, col, esc)
+  local dig = {
+    ["0"]={31,17,31}, ["1"]={0,31,0}, ["2"]={29,21,23}, ["3"]={21,21,31}, ["4"]={7,4,31},
+    ["5"]={23,21,29}, ["6"]={31,21,29}, ["7"]={1,1,31}, ["8"]={31,21,31}, ["9"]={23,21,31}
+  }
+  local paso = esc * 4
+  for i = 1, #txt do
+    local ch = sub(txt, i, i)
+    local m = dig[ch]
+    local dx = x + (i - 1) * paso
+    if m then
+      for c = 1, 3 do
+        local bits = m[c]
+        for r = 0, 4 do
+          if flr(bits / (2 ^ r)) % 2 == 1 then
+            rectfill(dx + (c - 1) * esc, y + r * esc, dx + c * esc - 1, y + (r + 1) * esc - 1, col)
+          end
+        end
+      end
+    end
+  end
+end
+
 function dibujar_categorias_juego(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, gen)
   cls(c_bg)
   local g = mis_juegos[juego_activo]
@@ -1524,23 +1598,104 @@ function dibujar_categorias_juego(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, 
     print("  [+] " .. tr(10) .. " cat.", 8, 27, 11)
   end
 
-  for slot = 1, 5 do
-    local idx = cat_scroll + slot
-    if idx <= #g.cats then
-      local ly = 37 + (slot - 1) * 14
-      local sel = (cat_cursor == idx)
-      local cid = g.cats[idx]
-      local cnom = cat_tr(cid)
-      local cval = tostr(g.vals[idx] or 0)
+  if ui_estilo == 2 then
+    clip(0, 36, 127, 74)
+    local off_y = flr(cat_anim_y)
+    if ui_zoom == 1 then
+      local idx = max(1, cat_cursor)
+      if idx <= #g.cats then
+        local cy = 38 + off_y
+        local sel = (cat_cursor == idx)
+        local cid = g.cats[idx]
+        local cnom = sub(cat_tr(cid), 1, 13)
+        local cval = tostr(g.vals[idx] or 0)
+        rectfill(6, cy, 121, cy + 68, sel and c_acc or c_pan)
+        rect(6, cy, 121, cy + 68, sel and 7 or c_acc)
+        print("\^w" .. cnom, 12, cy + 8, sel and c_atxt or c_txt)
+        line(12, cy + 20, 115, cy + 20, sel and c_atxt or c_acc)
+        local esc = (#cval >= 5) and 2 or 3
+        local nw = #cval * (esc * 4)
+        dibujar_num_grande(cval, 64 - flr(nw / 2), cy + 32, sel and c_atxt or 10, esc)
+      end
+    else
+      for slot = 0, 3 do
+        local idx = cat_scroll + slot
+        if idx >= 1 and idx <= #g.cats then
+          local cy = 38 + (slot - 1) * 35 + off_y
+          local sel = (cat_cursor == idx)
+          local cid = g.cats[idx]
+          local cnom = sub(cat_tr(cid), 1, 11)
+          local cval = tostr(g.vals[idx] or 0)
+          rectfill(6, cy, 121, cy + 32, sel and c_acc or c_pan)
+          rect(6, cy, 121, cy + 32, sel and 7 or c_acc)
+          print((sel and "> " or "  ") .. cnom, 10, cy + 5, sel and c_atxt or c_txt)
+          print("#" .. idx, 10, cy + 20, sel and c_atxt or 6)
+          local nw = #cval * 8
+          dibujar_num_grande(cval, 116 - nw, cy + 11, sel and c_atxt or 10, 2)
+        end
+      end
+    end
+    clip()
 
-      if sel then
-        rectfill(4, ly, 123, ly + 12, c_acc)
-        print((ui_zoom == 1 and "\^w>" or "> ") .. sub(cnom, 1, 12), 7, ly + 3, c_atxt)
-        print("[" .. cval .. "]", 120 - (#cval + 2) * 4, ly + 3, c_atxt)
-      else
-        rectfill(4, ly, 123, ly + 12, c_pan)
-        print((ui_zoom == 1 and "\^w " or "  ") .. sub(cnom, 1, 12), 7, ly + 3, c_txt)
-        print(cval, 120 - #cval * 4, ly + 3, 10)
+  elseif ui_estilo == 3 then
+    clip(0, 36, 127, 74)
+    local off_x = flr(cat_anim_x)
+    if ui_zoom == 1 then
+      local idx = max(1, cat_cursor)
+      if idx <= #g.cats then
+        local mx = 64 + off_x
+        local my = 72
+        local sel = (cat_cursor == idx)
+        local cid = g.cats[idx]
+        local cnom = sub(cat_tr(cid), 1, 13)
+        local cval = tostr(g.vals[idx] or 0)
+        circfill(mx, my, 33, sel and c_acc or c_pan)
+        circ(mx, my, 33, sel and 7 or c_acc)
+        circ(mx, my, 31, sel and c_atxt or c_bg)
+        print("\^w" .. cnom, mx - (#cnom * 4), my - 18, sel and c_atxt or c_txt)
+        local esc = (#cval >= 4) and 2 or 3
+        local nw = #cval * (esc * 4)
+        dibujar_num_grande(cval, mx - flr(nw / 2), my - 2, sel and c_atxt or 10, esc)
+      end
+    else
+      for slot = 0, 3 do
+        local idx = cat_scroll + slot
+        if idx >= 1 and idx <= #g.cats then
+          local mx = 34 + (slot - 1) * 60 + off_x
+          local my = 72
+          local sel = (cat_cursor == idx)
+          local cid = g.cats[idx]
+          local cnom = sub(cat_tr(cid), 1, 10)
+          local cval = tostr(g.vals[idx] or 0)
+          circfill(mx, my, 27, sel and c_acc or c_pan)
+          circ(mx, my, 27, sel and 7 or c_acc)
+          print(cnom, mx - (#cnom * 2), my - 14, sel and c_atxt or c_txt)
+          local nw = #cval * 8
+          dibujar_num_grande(cval, mx - flr(nw / 2), my - 2, sel and c_atxt or 10, 2)
+        end
+      end
+    end
+    clip()
+
+  else
+    for slot = 1, 5 do
+      local idx = cat_scroll + slot
+      if idx <= #g.cats then
+        local ly = 37 + (slot - 1) * 14
+        local sel = (cat_cursor == idx)
+        local cid = g.cats[idx]
+        local cnom = cat_tr(cid)
+        local cval = tostr(g.vals[idx] or 0)
+
+        if sel then
+          rectfill(4, ly, 123, ly + 12, c_acc)
+          print((ui_zoom == 1 and "\^w>" or "> ") .. sub(cnom, 1, 12), 7, ly + 3, c_atxt)
+          print("[" .. cval .. "]", 120 - (#cval + 2) * 4, ly + 3, c_atxt)
+        else
+          rectfill(4, ly, 123, ly + 12, c_pan)
+          print((ui_zoom == 1 and "\^w " or "  ") .. sub(cnom, 1, 12), 7, ly + 3, c_txt)
+          print(cval, 120 - #cval * 4, ly + 3, 10)
+        end
       end
     end
   end
@@ -1686,7 +1841,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.01",
+    "version: v0.02",
     "",
     tr(37),
     "martstartiv",
@@ -1759,4 +1914,3 @@ function dibujar_ranita(x, y)
     end
   end
 end
-
