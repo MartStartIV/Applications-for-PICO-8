@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.01</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.02</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,12 +188,18 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.17 (Calculator Xtree V0.11) - current version</h4>
+    <h4>Version 0.18 (Counter Games Xtree V0.02) - current version</h4>
+    <ul>
+      <li>Themes 2 and 3 have been redesigned, as they previously had some display issues including when viewed during gameplay.</li>
+      <li>The design of the themes has been improved overall, specifically regarding how they appear when the graphical interface's zoom mode is applied.</li>
+      <li>Minor issues have been resolved.</li>
+    </ul>
+    <h4>Version 0.17 (Calculator Xtree V0.11)</h4>
     <ul>
       <li>Three additional mini-games have been added; the little frog will now invite you to play different games as you continue using the app, provided you haven’t cleared your history.</li>
       <li>Some issues have been resolved.</li>
     </ul>
-    <h4>Version 0.16 (Add Notes Xtree V0.05) - current version</h4>
+    <h4>Version 0.16 (Add Notes Xtree V0.05)</h4>
     <ul>
       <li>A new feature is now available under additional options.</li>
       <li>You can now view and configure a hotkey to quickly switch the virtual keyboard between letter mode and numeric mode, saving you time; the default setting is also saved.</li>
