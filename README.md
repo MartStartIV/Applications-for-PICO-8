@@ -66,7 +66,7 @@
 <!-- APP CARD START: ADD NOTES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>📝 Add Notes Xtree <kbd>V0.05</kbd></h3>
+  <h3>📝 Add Notes Xtree <kbd>V0.06</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,6 +188,16 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
+    <h4>Version 0.20 (Add Notes Xtree V0.06) - current version</h4>
+    <ul>
+      <li>New option added under "Additional Options".</li>
+      <li>You can now enable word auto completion, powered by an integrated mini dictionary; this also adds a new key to the app's virtual keyboard.</li>
+      <li>The mini dictionary has been enhanced to include more words across all supported languages.</li>
+      <li>Missing translations have been addressed.</li>
+      <li>Various minor issues have been fixed.</li>
+      <li>The data compression system has been improved, allowing for more information to be stored compared to previous versions (note: any data saved from previous versions will become invalid when using this mode).</li>
+      <li>A new feature has been added under "Additional Options" that significantly increases data storage capacity through more aggressive compression. Please note that enabling this feature requires deleting existing records due to limitations in the file format used for storage; this is an optional setting and is distinct from the improvement mentioned in the previous point.</li>
+    </ul>
     <h4>Version 0.19 (Counter Games Xtree V0.03) - current version</h4>
     <ul>
       <li>UI themes with zoom applied now feature scrolling text, ensuring the full content is displayed.</li>
