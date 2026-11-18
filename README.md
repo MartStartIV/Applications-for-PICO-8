@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.02</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.03</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,7 +188,13 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.18 (Counter Games Xtree V0.02) - current version</h4>
+    <h4>Version 0.19 (Counter Games Xtree V0.03) - current version</h4>
+    <ul>
+      <li>UI themes with zoom applied now feature scrolling text, ensuring the full content is displayed.</li>
+      <li>Three new design themes have been added, taking into account all previously implemented features.</li>
+      <li>Several identified issues have been resolved.</li>
+    </ul>
+    <h4>Version 0.18 (Counter Games Xtree V0.02)</h4>
     <ul>
       <li>Themes 2 and 3 have been redesigned, as they previously had some display issues including when viewed during gameplay.</li>
       <li>The design of the themes has been improved overall, specifically regarding how they appear when the graphical interface's zoom mode is applied.</li>
