@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.02]
+-- proyecto: counter games xtree [v0.03]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.02"
+  app_ver = "v0.03"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -324,6 +324,7 @@ function _init()
   boot_ok = false
   cat_anim_y = 0
   cat_anim_x = 0
+  marquee_t = 0
 end
 -- =========================================================
 -- parte 2a: motor de guardado instantaneo (sin pcall)
@@ -377,7 +378,7 @@ function crear_objeto_juego(id_j, nom_custom)
 end
 
 function guardar_datos()
-  local cfg0 = 1000 + idioma + (tema_idx * 32) + (ui_estilo * 512) + (ui_zoom * 2048) + (modo_animo * 4096)
+  local cfg0 = 1000 + idioma + (tema_idx * 32) + (ui_estilo * 512) + (ui_zoom * 4096) + (modo_animo * 8192)
   local sub0 = emocion_fija + (tema_auto_juego * 16)
   dset(0, cfg0 + (sub0 / 256))
 
@@ -437,16 +438,16 @@ function cargar_datos()
   local v0 = dget(0) or 0
   local ent0 = flr(v0)
 
-  if ent0 >= 1000 and ent0 < 10000 then
+  if ent0 >= 1000 and ent0 < 20000 then
     local base0 = ent0 - 1000
     idioma = base0 % 32
     if idioma < 1 or idioma > 18 then idioma = 1 end
     tema_idx = flr(base0 / 32) % 16
     if tema_idx < 1 or tema_idx > 10 then tema_idx = 1 end
-    ui_estilo = flr(base0 / 512) % 4
-    if ui_estilo < 1 or ui_estilo > 4 then ui_estilo = 1 end
-    ui_zoom = flr(base0 / 2048) % 2
-    modo_animo = flr(base0 / 4096) % 2
+    ui_estilo = flr(base0 / 512) % 8
+    if ui_estilo < 1 or ui_estilo > 7 then ui_estilo = 1 end
+    ui_zoom = flr(base0 / 4096) % 2
+    modo_animo = flr(base0 / 8192) % 2
 
     local dec0 = flr((v0 - ent0) * 256 + 0.5)
     emocion_fija = dec0 % 16
@@ -572,6 +573,7 @@ function _update()
     cargar_datos()
   end
 
+  marquee_t = (marquee_t + 1) % 30000
   if aviso_t > 0 then aviso_t = aviso_t - 1 end
   if trans_t > 0 then trans_t = trans_t - 1 end
   if modal_anim > 0 then modal_anim = modal_anim - 1 end
@@ -1009,7 +1011,7 @@ function actualizar_categorias_juego()
 
   local tot_c = #g.cats
   local prev_c = cat_cursor
-  local es_moderno = (ui_estilo == 2 or ui_estilo == 3)
+  local es_moderno = (ui_estilo == 2 or ui_estilo == 3 or ui_estilo >= 5)
   local btn_prev = (ui_estilo == 3) and btnp(0) or btnp(2)
   local btn_next = (ui_estilo == 3) and btnp(1) or btnp(3)
 
@@ -1173,8 +1175,8 @@ function actualizar_opciones()
     if izq then idioma = (idioma - 2) % 18 + 1 end
     if der or acc then idioma = (idioma % 18) + 1 end
   elseif opt_cursor == 2 then
-    if izq then ui_estilo = (ui_estilo - 2) % 4 + 1 end
-    if der or acc then ui_estilo = (ui_estilo % 4) + 1 end
+    if izq then ui_estilo = (ui_estilo - 2) % 7 + 1 end
+    if der or acc then ui_estilo = (ui_estilo % 7) + 1 end
   elseif opt_cursor == 3 then
     if izq then tema_idx = (tema_idx - 2) % 10 + 1 end
     if der or acc then tema_idx = (tema_idx % 10) + 1 end
@@ -1344,7 +1346,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.02", 12, 7, 7)
+  print("counter games xtree v0.03", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -1380,6 +1382,21 @@ function dibujar_registro_nombre(c_bg, c_pan, c_txt, c_acc, c_atxt)
   dibujar_teclado_moderno(42, c_pan, c_txt, c_acc, c_atxt)
   dibujar_ranita(110, 112)
 end
+
+function texto_marquee(txt, max_ch, sel)
+  if not sel or #txt <= max_ch then
+    return sub(txt, 1, max_ch)
+  end
+  local exceso = #txt - max_ch
+  local ciclo = 24 + (exceso * 12) + 24
+  local t = marquee_t % ciclo
+  local off = 0
+  if t > 24 then
+    off = min(exceso, flr((t - 24) / 12) + 1)
+  end
+  return sub(txt, 1 + off, max_ch + off)
+end
+
 
 function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, gen)
   cls(c_bg)
@@ -1431,11 +1448,13 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
         rect(cx, cy, cx + 58, cy + 30, sel and 7 or c_acc)
         dibujar_portada_aislada(cx + 3, cy + 3, gen, c_acc, c_txt)
         if ui_zoom == 1 then
-          print("\^w" .. sub(mis_juegos[i].nombre, 1, 4), cx + 23, cy + 8, sel and c_atxt or c_txt)
+          local nom_m = texto_marquee(mis_juegos[i].nombre, 4, sel)
+          print("\^w" .. nom_m, cx + 23, cy + 8, sel and c_atxt or c_txt)
           local lbl_c = #mis_juegos[i].cats .. " " .. sub(tr(5), 1, 8)
           print(lbl_c, cx + 4, cy + 23, sel and c_atxt or 11)
         else
-          print(sub(mis_juegos[i].nombre, 1, 8), cx + 23, cy + 6, sel and c_atxt or c_txt)
+          local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
+          print(nom_m, cx + 23, cy + 6, sel and c_atxt or c_txt)
           local lbl_c = #mis_juegos[i].cats .. " " .. sub(tr(5), 1, 5)
           print(lbl_c, cx + 23, cy + 16, sel and c_atxt or 11)
         end
@@ -1469,6 +1488,74 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
         end
       end
 
+    elseif ui_estilo == 5 then
+      local idx_g = max(1, juego_sel - 1)
+      local g_act = mis_juegos[idx_g]
+      local sel = (juego_sel >= 2)
+      if g_act then
+        rectfill(6, 44, 121, 108, sel and c_acc or c_pan)
+        rect(6, 44, 121, 108, sel and 7 or c_acc)
+        rectfill(10, 48, 46, 84, 0)
+        rect(10, 48, 46, 84, sel and 7 or c_acc)
+        dibujar_portada_aislada(19, 57, gen, c_acc, c_txt)
+        local cat_txt = #g_act.cats .. " " .. sub(tr(5), 1, 11)
+        if ui_zoom == 1 then
+          local nom_m = texto_marquee(g_act.nombre, 8, sel)
+          print("\^w" .. nom_m, 51, 52, sel and c_atxt or 7)
+          print(cat_txt, 51, 66, sel and c_atxt or 10)
+        else
+          local nom_m = texto_marquee(g_act.nombre, 16, sel)
+          print(nom_m, 51, 52, sel and c_atxt or 7)
+          print(cat_txt, 51, 64, sel and c_atxt or 10)
+          print(sub(tr(20), 1, 16), 51, 75, sel and c_atxt or 11)
+        end
+        line(10, 89, 117, 89, sel and c_atxt or c_acc)
+        for d = 1, #mis_juegos do
+          local dx = 48 + (d - 1) * 9
+          circfill(dx, 98, (d == idx_g) and 3 or 1, (d == idx_g) and 7 or 5)
+        end
+        print(idx_g .. "/" .. #mis_juegos, 96, 95, sel and c_atxt or 6)
+      end
+
+    elseif ui_estilo == 6 then
+      for i = 1, #mis_juegos do
+        local ly = 44 + (i - 1) * 16
+        local sel = (juego_sel == i + 1)
+        local nc = #mis_juegos[i].cats
+        rectfill(4, ly, 123, ly + 13, sel and c_acc or c_pan)
+        rectfill(4, ly, 7, ly + 13, sel and 7 or 11)
+        local bar_w = min(24, nc * 2)
+        rectfill(96, ly + 4, 96 + bar_w, ly + 9, sel and c_atxt or 11)
+        rect(96, ly + 4, 120, ly + 9, sel and c_atxt or c_acc)
+        if ui_zoom == 1 then
+          local nom_m = texto_marquee(mis_juegos[i].nombre, 10, sel)
+          print("\^w" .. nom_m, 11, ly + 4, sel and c_atxt or c_txt)
+        else
+          local nom_m = texto_marquee(mis_juegos[i].nombre, 19, sel)
+          print(nom_m, 11, ly + 4, sel and c_atxt or c_txt)
+        end
+      end
+
+    elseif ui_estilo == 7 then
+      for i = 1, #mis_juegos do
+        local ly = 44 + (i - 1) * 16
+        local sel = (juego_sel == i + 1)
+        local tot_pts = 0
+        for v = 1, #mis_juegos[i].vals do tot_pts = tot_pts + mis_juegos[i].vals[v] end
+        rectfill(4, ly, 123, ly + 13, sel and c_pan or 0)
+        rect(4, ly, 123, ly + 13, sel and 7 or c_acc)
+        rect(6, ly + 2, 121, ly + 11, sel and c_acc or c_pan)
+        if ui_zoom == 1 then
+          local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
+          print("\^w" .. nom_m, 9, ly + 4, sel and 7 or c_txt)
+          print("\^w" .. tot_pts, 118 - (#tostr(tot_pts) * 8), ly + 4, 10)
+        else
+          local nom_m = texto_marquee(mis_juegos[i].nombre, 11, sel)
+          print("p" .. i .. ":" .. nom_m, 9, ly + 4, sel and 7 or c_txt)
+          print(tostr(tot_pts), 118 - (#tostr(tot_pts) * 4), ly + 4, 10)
+        end
+      end
+
     else
       for i = 1, #mis_juegos do
         local ly = 44 + (i - 1) * 16
@@ -1478,10 +1565,12 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
         rectfill(4, ly, 123, ly + 13, sel and c_acc or 0)
         rect(4, ly, 123, ly + 13, c_acc)
         if ui_zoom == 1 then
-          print("\^w" .. sub(mis_juegos[i].nombre, 1, 8), 7, ly + 4, sel and c_atxt or c_txt)
+          local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
+          print("\^w" .. nom_m, 7, ly + 4, sel and c_atxt or c_txt)
           print("\^w" .. tot_pts, 120 - (#tostr(tot_pts) * 8), ly + 4, sel and c_atxt or 10)
         else
-          print("#" .. i .. " " .. sub(mis_juegos[i].nombre, 1, 12), 7, ly + 4, sel and c_atxt or c_txt)
+          local nom_m = texto_marquee(mis_juegos[i].nombre, 12, sel)
+          print("#" .. i .. " " .. nom_m, 7, ly + 4, sel and c_atxt or c_txt)
           print("[" .. tot_pts .. "]", 92, ly + 4, sel and c_atxt or 10)
         end
       end
@@ -1677,6 +1766,117 @@ function dibujar_categorias_juego(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, 
     end
     clip()
 
+  elseif ui_estilo == 5 then
+    clip(0, 36, 127, 74)
+    local off_y = flr(cat_anim_y)
+    if ui_zoom == 1 then
+      local idx = max(1, cat_cursor)
+      if idx <= #g.cats then
+        local cy = 38 + off_y
+        local sel = (cat_cursor == idx)
+        local cnom = sub(cat_tr(g.cats[idx]), 1, 13)
+        local val_n = g.vals[idx] or 0
+        local cval = tostr(val_n)
+        rectfill(6, cy, 121, cy + 68, sel and c_acc or c_pan)
+        rect(6, cy, 121, cy + 68, sel and 7 or c_acc)
+        print("\^w" .. cnom, 12, cy + 7, sel and c_atxt or c_txt)
+        local bw = min(100, (val_n % 25) * 4)
+        rect(12, cy + 20, 114, cy + 25, sel and c_atxt or c_acc)
+        if bw > 0 then rectfill(13, cy + 21, 13 + bw, cy + 24, sel and 7 or 11) end
+        local esc = (#cval >= 5) and 2 or 3
+        dibujar_num_grande(cval, 64 - flr((#cval * esc * 4) / 2), cy + 33, sel and c_atxt or 10, esc)
+      end
+    else
+      for slot = 0, 3 do
+        local idx = cat_scroll + slot
+        if idx >= 1 and idx <= #g.cats then
+          local cy = 38 + (slot - 1) * 35 + off_y
+          local sel = (cat_cursor == idx)
+          local cnom = sub(cat_tr(g.cats[idx]), 1, 11)
+          local val_n = g.vals[idx] or 0
+          local cval = tostr(val_n)
+          rectfill(6, cy, 121, cy + 32, sel and c_acc or c_pan)
+          rect(6, cy, 121, cy + 32, sel and 7 or c_acc)
+          print(cnom, 11, cy + 5, sel and c_atxt or c_txt)
+          local bw = min(56, (val_n % 15) * 4)
+          rect(11, cy + 19, 69, cy + 24, sel and c_atxt or c_acc)
+          if bw > 0 then rectfill(12, cy + 20, 12 + bw, cy + 23, sel and 7 or 11) end
+          dibujar_num_grande(cval, 116 - (#cval * 8), cy + 10, sel and c_atxt or 10, 2)
+        end
+      end
+    end
+    clip()
+
+  elseif ui_estilo == 6 then
+    clip(0, 36, 127, 74)
+    local off_y = flr(cat_anim_y)
+    if ui_zoom == 1 then
+      local idx = max(1, cat_cursor)
+      if idx <= #g.cats then
+        local cy = 38 + off_y
+        local sel = (cat_cursor == idx)
+        local cnom = sub(cat_tr(g.cats[idx]), 1, 13)
+        local cval = tostr(g.vals[idx] or 0)
+        rectfill(6, cy, 121, cy + 68, sel and c_acc or c_pan)
+        rectfill(6, cy, 11, cy + 68, sel and 7 or 11)
+        print("\^w" .. cnom, 16, cy + 8, sel and c_atxt or c_txt)
+        local esc = (#cval >= 5) and 2 or 3
+        dibujar_num_grande(cval, 68 - flr((#cval * esc * 4) / 2), cy + 31, sel and c_atxt or 10, esc)
+      end
+    else
+      for slot = 0, 3 do
+        local idx = cat_scroll + slot
+        if idx >= 1 and idx <= #g.cats then
+          local cy = 38 + (slot - 1) * 35 + off_y
+          local sel = (cat_cursor == idx)
+          local cnom = sub(cat_tr(g.cats[idx]), 1, 11)
+          local cval = tostr(g.vals[idx] or 0)
+          rectfill(6, cy, 121, cy + 32, sel and c_acc or c_pan)
+          rectfill(6, cy, 10, cy + 32, sel and 7 or 11)
+          print(cnom, 14, cy + 6, sel and c_atxt or c_txt)
+          print(idx .. "/" .. #g.cats, 14, cy + 20, sel and c_atxt or 6)
+          dibujar_num_grande(cval, 116 - (#cval * 8), cy + 10, sel and c_atxt or 10, 2)
+        end
+      end
+    end
+    clip()
+
+  elseif ui_estilo == 7 then
+    clip(0, 36, 127, 74)
+    local off_y = flr(cat_anim_y)
+    if ui_zoom == 1 then
+      local idx = max(1, cat_cursor)
+      if idx <= #g.cats then
+        local cy = 38 + off_y
+        local sel = (cat_cursor == idx)
+        local cnom = sub(cat_tr(g.cats[idx]), 1, 12)
+        local cval = tostr(g.vals[idx] or 0)
+        rectfill(6, cy, 121, cy + 68, sel and c_pan or 0)
+        rect(6, cy, 121, cy + 68, sel and 7 or c_acc)
+        rect(9, cy + 3, 118, cy + 65, sel and c_acc or c_pan)
+        print("\^w" .. cnom, 64 - (#cnom * 4), cy + 9, sel and 7 or c_txt)
+        local esc = (#cval >= 5) and 2 or 3
+        dibujar_num_grande(cval, 64 - flr((#cval * esc * 4) / 2), cy + 31, 10, esc)
+      end
+    else
+      for slot = 0, 3 do
+        local idx = cat_scroll + slot
+        if idx >= 1 and idx <= #g.cats then
+          local cy = 38 + (slot - 1) * 35 + off_y
+          local sel = (cat_cursor == idx)
+          local cnom = sub(cat_tr(g.cats[idx]), 1, 10)
+          local cval = tostr(g.vals[idx] or 0)
+          rectfill(6, cy, 121, cy + 32, sel and c_pan or 0)
+          rect(6, cy, 121, cy + 32, sel and 7 or c_acc)
+          rect(8, cy + 2, 119, cy + 30, sel and c_acc or c_pan)
+          print("[" .. cnom .. "]", 12, cy + 6, sel and 7 or c_txt)
+          print("lvl " .. idx, 12, cy + 19, 11)
+          dibujar_num_grande(cval, 115 - (#cval * 8), cy + 10, 10, 2)
+        end
+      end
+    end
+    clip()
+
   else
     for slot = 1, 5 do
       local idx = cat_scroll + slot
@@ -1751,7 +1951,7 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
     "radera all sparad data?", "hapus semua data?", "xoa tat ca du lieu?"
   }
 
-  local estilos_nom = {"#1", "#2", "#3", "#4"}
+  local estilos_nom = {"#1", "#2", "#3", "#4", "#5", "#6", "#7"}
   local items = {
     {tr(1), "<" .. cod_lang[idioma] .. ">"},
     {tr(12), estilos_nom[ui_estilo]},
@@ -1841,7 +2041,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.02",
+    "version: v0.03",
     "",
     tr(37),
     "martstartiv",
