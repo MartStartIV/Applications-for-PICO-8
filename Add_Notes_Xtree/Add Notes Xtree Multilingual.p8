@@ -2,13 +2,13 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.05]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.06]
 -- PARTE 1 DE 4: NÚCLEO DE INICIALIZACIÓN Y CONTROL DE FLUX
 -- =========================================================
 
 function _init()
   id_nombre = "ADD NOTES XTREE"
-  id_version = "V0.05"
+  id_version = "V0.06"
   
   -- MÁQUINA DE ESTADOS COMPATIBLE CON MIPS
   -- 0 = selector de idioma
@@ -124,6 +124,41 @@ function _init()
   btn_teclado_temp = 0       -- copia temporal mientras se edita antes de aplicar/rechazar
   ultimo_btn_reg = "ninguno" -- reporte técnico del último botón presionado
   ultimo_btn_col = 5         -- color dinámico del indicador técnico
+  
+  -- =========================================================
+  -- EXTENSIÓN AUTOCOMPLETADO LIGERO POR IDIOMA [BAJO CONSUMO]
+  -- =========================================================
+  config_autocomp = 0        -- 0 = off (default), 1 = on
+  sugerencia_actual = ""     -- fragmento restante sugerido
+  config_alm_plus = 0        -- 0 = clásico (default), 1 = almacenamiento extra plus (5x)
+  aviso_plus_abierto = false -- controla la ventana emergente de confirmación
+  aviso_plus_cursor = 2      -- 1 = aceptar, 2 = cancelar (por seguridad empieza en cancelar)
+
+  -- Mini-diccionario extendido (85 palabras clave por idioma = solo 11 tokens en total)
+  dict_autocomp = {
+    -- 1. Español (es)
+    "hola como estas bien gracias hoy manana ayer dia noche semana mes ano nota lista tarea idea cita clave codigo cuenta banco pago dinero precio compra venta casa cuarto cocina bano calle ciudad viaje coche tren avion trabajo oficina escuela clase libro proyecto amigo familia madre padre hermano hijo perro gato juego consola bateria pantalla boton tarjeta archivo musica foto video tiempo hora minuto bueno malo nuevo viejo grande pequeno todo nada siempre nunca aqui alli hacer decir ir ver dar saber querer poder poner tener llamar pagar recordar buscar guardar borrar abrir cerrar feliz listo",
+    -- 2. English (en)
+    "hello how are you good thanks today tomorrow yesterday day night week month year note list task idea meeting password code account bank payment money price buy sell home room kitchen bath street city trip car train plane work office school class book project friend family mother father brother son dog cat game console battery screen button card file music photo video time hour minute nice bad new old big small all nothing always never here there make say go see give know want can put have call pay remember search save delete open close happy ready",
+    -- 3. Polski (pl)
+    "czesc jak sie masz dobrze dzieki dzisiaj jutro wczoraj dzien noc tydzien miesiac rok notatka lista zadanie pomysl spotkanie haslo kod konto bank platnosc pieniadze cena zakup sprzedaz dom pokoj kuchnia lazienka ulica miasto podroz auto pociag samolot praca biuro szkola lekcja ksiazka projekt przyjaciel rodzina matka ojciec brat syn pies kot gra konsola bateria ekran przycisk karta plik muzyka zdjecie wideo czas godzina minuta dobry zly nowy stary duzy maly wszystko nic zawsze nigdy tutaj tam zrobic powiedziec isc widziec dac wiedziec chciec moc polozyc miec zadzwonic zaplacic pamietac szukac zapisac usunac otworzyc zamknac szczesliwy gotowy",
+    -- 4. Russian (ru)
+    "privet kak dela horosho spasibo segodnya zavtra vchera den noch nedelya mesyac god zametka spisok zadacha ideya vstrecha parol kod schet bank platezh dengi cena pokupka prodazha dom komnata kuhnya vannaya ulica gorod poezdka mashina poezd samolet rabota ofis shkola urok kniga proekt drug semya mama papa brat syn sobaka koshka igra konsol batareya ekran knopka karta fajl muzyka foto video vremya chas minuta ploho novyj staryj bolshoj malenkij vse nichego vsegda nikogda zdes tam sdelat skazat idti videt dat znat hotet moch polozhit imet pozvonit zaplatit pomnit iskat sohranit udalit otkryt zakryt schastlivyj gotov",
+    -- 5. Português (pt)
+    "ola como esta bem obrigado hoje amanha ontem dia noite semana mes ano nota lista tarefa ideia encontro senha codigo conta banco pagamento dinheiro preco compra venda casa quarto cozinha banheiro rua cidade viagem carro trem aviao trabalho escritorio escola aula livro projeto amigo familia mae pai irmao filho cachorro gato jogo console bateria tela botao cartao arquivo musica foto video tempo hora minuto bom ruim novo velho grande pequeno tudo nada sempre nunca aqui ali fazer dizer ir ver dar saber querer poder por ter ligar pagar lembrar buscar salvar apagar abrir fechar feliz pronto",
+    -- 6. Italiano (it)
+    "ciao come stai bene grazie oggi domani ieri giorno notte settimana mese anno nota lista compito idea appuntamento password codice conto banca pagamento soldi prezzo acquisto vendita casa stanza cucina bagno strada citta viaggio auto treno aereo lavoro ufficio scuola lezione libro progetto amico famiglia madre padre fratello figlio cane gatto gioco console batteria schermo tasto scheda file musica foto video tempo ora minuto bello brutto nuovo vecchio grande piccolo tutto niente sempre mai qui li fare dire andare vedere dare sapere volere potere mettere avere chiamare pagare ricordare cercare salvare eliminare aprire chiudere felice pronto",
+    -- 7. Français (fr)
+    "salut comment vas bien merci aujourd demain hier jour nuit semaine mois annee note liste tache idee rendez motdepasse code compte banque paiement argent prix achat vente maison chambre cuisine bain rue ville voyage voiture train avion travail bureau ecole cours livre projet ami famille mere pere frere fils chien chat jeu console batterie ecran bouton carte fichier musique photo video temps heure minute bon mauvais nouveau vieux grand petit tout rien toujours jamais ici la faire dire aller voir donner savoir vouloir pouvoir mettre avoir appeler payer rappeler chercher garder effacer ouvrir fermer heureux pret",
+    -- 8. Nihongo (jp)
+    "konnichiwa genki arigatou kyou ashita kinou hi yoru shuu tsuki toshi memo risuto shukudai aidea yotei pasuwaado koodo kouza ginkou shiharai okane nedan kaimono hanbai ie heya daidokoro ofuro michi machi ryokou kuruma densha hikouki shigoto jimusho gakkou jugyou hon purojekuto tomodachi kazoku haha chichi ani musuko inu neko geemu konsoru denchi gamen botan kaado fairu ongaku shashin douga jikan jikanmai fun ii warui atarashii furui ookii chiisai subete nanimo itsumo kesshite koko soko suru iu iku miru ageru shiru hoshii dekiru oku motsu denwa harau oboeru sagasu hozon sakujo akeru shimeru ureshii junbi",
+    -- 9. Zhongwen (cn)
+    "nihao zenme hao xiexie jintian mingtian zuotian tian wanshang xingqi yue nian biji qingdan renwu xiangfa yuehui mima daima zhanghu yinhang fukuan qian jiage goumai chushou jia fangjian chufang yushi jiedao chengshi luxing qiche huoche feiji gongzuo bangongshi xuexiao kecheng shu xiangmu pengyou jiaren mama baba xiongdi erzi gou mao youxi zhuji dianchi pingmu anjian kapian wenjian yinyue zhaopian shipin shijian xiaoshi fenzhong bucuo huai xin jiu da xiao quanbu meiyou zongshi conglai zheli nali zuo shuo qu kan gei zhidao xiang neng fang you dadianhua fuqian jizhu xunzhao baocun shanchu dakai guanbi kaixin zhunbei",
+    -- 10. Hangugeo (kr)
+    "annyeong eotteohge johayo gamsa oneul naeil eoje nal bam ju dal nyeon memo mogrog gwaje aidea yaksok bimilbeonho kodeu gyejwa eunhaeng gyeolje don gagyeok gumae panmae jip bang bueok hwadangsil geori dosi yeohaeng jadongcha gicha bihaenggi il samusil hakgyo sueop chaek peurojekteu chingu gajok eomma appa hyeongje adeul gae goyangi geim konsol baeteori hwamyeon beoteun kadeu pail eumak sajin bideo sigan siganmae bun joheun nappeun sae oraedoen keun jageun modeun amugeotdo hangsang jeoldae yeogi jeogi hada malhada gada boda juda alda wonhada halnohda gajida jeonhwa naeda gieok chatda jeojang sakje yeolda datda haengbok junbi",
+    -- 11. Turkce (tr)
+    "merhaba nasilsin iyiyim tesekkur bugun yarin dun gun gece hafta ay yil not liste gorev fikir randevu sifre kod hesap banka odeme para fiyat alis satis ev oda mutfak banyo sokak sehir gezi araba tren ucak is ofis okul ders kitap proje arkadas aile anne baba kardes ogul kopek kedi oyun konsol pil ekran tus kart dosya muzik fotograf video zaman saat dakika guzel kotu yeni eski buyuk kucuk hersey hicbir herzaman asla burada orada yapmak soylemek gitmek gormek vermek bilmek istemek edebilmek koymak sahip aramak odemek hatirla aramak kaydet silmek acmak kapatmak mutlu hazir"
+  }  
 end
 
 function _update()
@@ -226,7 +261,7 @@ function _update()
   end
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.05]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.06]
 -- PARTE 2 DE 4: DESPACHADOR DE COLOR Y SELECTORES INICIALES
 -- =========================================================
 
@@ -307,7 +342,7 @@ function render_selector_perfil()
   print("(a): ok", 48, 112, 10)
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.05]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.06]
 -- PARTE 3 DE 4: MENÚ DE NOTAS Y MASCOTA CON EXPRESIONES
 -- =========================================================
 
@@ -380,7 +415,7 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   rectfill(0, 0, 127, 11, c_display)
   line(0, 11, 127, 11, c_btn_txt)
   
-  print("ADD NOTES XTREE V0.05", 4, 3, c_txt_dis)
+  print("ADD NOTES XTREE V0.06", 4, 3, c_txt_dis)
   print(str_reloj, 94, 3, 5)
 
   local t_lang = textos_sistema[idioma_actual][6]  -- "notas creadas:"
@@ -607,19 +642,44 @@ function render_ranita_completa(x, y)
   end
 end
 
+function obtener_sugerencia_palabra()
+  if config_autocomp != 1 then return "" end
+  local txt = sub(texto_nota_buffer or "", 1, cursor_texto_pos - 1)
+  if #txt == 0 then return "" end
 
--- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.05]
--- PARTE 4 DE 4: TECLADO, VISOR, ACERCA DE Y PERSISTENCIA
--- =========================================================
+  local palabra = ""
+  for i = #txt, 1, -1 do
+    local ch = sub(txt, i, i)
+    if ch == " " then break end
+    palabra = ch .. palabra
+  end
+  if #palabra < 1 then return "" end
+
+  local dic = dict_autocomp[idioma_actual] or ""
+  local actual = ""
+  for i = 1, #dic + 1 do
+    local ch = (i <= #dic) and sub(dic, i, i) or " "
+    if ch == " " then
+      if #actual > #palabra and sub(actual, 1, #palabra) == palabra then
+        return sub(actual, #palabra + 1)
+      end
+      actual = ""
+    else
+      actual = actual .. ch
+    end
+  end
+  return ""
+end
+
 
 function actualizar_teclado_virtual()
-  -- 1. Primero evaluamos salida o combos B + Dirección (antes de mover el cursor)
+  -- 1. Evaluar salida o combos B + Dirección
   if btn_teclado_modo == 0 then
     if btnp(5) or stat(30) == 14 then
       modo_actual = 2
       cursor_menu = 1
       bloqueo_a = false
+      cooldown_teclado = 10
       return
     end
   else
@@ -649,7 +709,6 @@ function actualizar_teclado_virtual()
       return
     end
 
-    -- Mientras B está oprimido espera el combo; si lo sueltas sin combo, sale al menú
     if b_presionado then
       b_estaba_activo = true
       return
@@ -659,42 +718,51 @@ function actualizar_teclado_virtual()
         modo_actual = 2
         cursor_menu = 1
         bloqueo_a = false
+        cooldown_teclado = 10
         return
       end
       combo_b_usado = false
     end
   end
 
-  -- 2. Movimiento seguro por la cuadrícula (solo se ejecuta si B no está retenido)
-  if btnp(0) then teclado_cx = (teclado_cx - 1) % teclado_max_cx end
-  if btnp(1) then teclado_cx = (teclado_cx + 1) % teclado_max_cx end
-  if btnp(2) then teclado_cy = (teclado_cy - 1) % teclado_max_cy end
-  if btnp(3) then teclado_cy = (teclado_cy + 1) % teclado_max_cy end
+  -- 2. Movimiento por cuadrícula (6 filas normal, 7 filas si autocompletado está ON)
+  local max_filas = (config_autocomp == 1) and 7 or 6
+  if btnp(0) and teclado_cy < 6 then teclado_cx = (teclado_cx - 1) % teclado_max_cx end
+  if btnp(1) and teclado_cy < 6 then teclado_cx = (teclado_cx + 1) % teclado_max_cx end
+  if btnp(2) then teclado_cy = (teclado_cy - 1) % max_filas end
+  if btnp(3) then teclado_cy = (teclado_cy + 1) % max_filas end
 
-  -- 3. Selección estricta con el Botón A físico (Evita interferencias con el botón B)
+  -- 3. Selección con botón A
   if (btn(4) or stat(30) == 13) and not (btn(5) or stat(30) == 14) then
     if not bloqueo_a then
       bloqueo_a = true 
       
-      local idx = teclado_cy * teclado_max_cx + teclado_cx + 1
-      local car = teclado_mapa[idx]
-      
-      if car == "123" then
-        teclado_mapa = teclado_mapa_simbolos
-      elseif car == "abc" then
-        teclado_mapa = teclado_mapa_letras
-      elseif car then
-        procesar_caracter_seguro(car)
+      if config_autocomp == 1 and teclado_cy == 6 then
+        if #sugerencia_actual > 0 then
+          local comp = sugerencia_actual .. " "
+          for j = 1, #comp do
+            procesar_caracter_seguro(sub(comp, j, j))
+          end
+        end
+      else
+        local idx = teclado_cy * teclado_max_cx + teclado_cx + 1
+        local car = teclado_mapa[idx]
+        
+        if car == "123" then
+          teclado_mapa = teclado_mapa_simbolos
+        elseif car == "abc" then
+          teclado_mapa = teclado_mapa_letras
+        elseif car then
+          procesar_caracter_seguro(car)
+        end
       end
     end
   else
-    -- Solo libera el botón A si las teclas principales no están oprimidas
     if not btn(4) and stat(30) != 13 then
       bloqueo_a = false 
     end
   end
 end
-
 
 function procesar_caracter_seguro(car)
   texto_nota_buffer = texto_nota_buffer or ""
@@ -768,10 +836,17 @@ function render_pantalla_teclado_virtual(c_fondo, c_display, c_txt_dis, c_btn_bs
     texto_imprimir = p1 .. "|" .. p2
   end
   
-  if #texto_imprimir > 28 then
-    texto_imprimir = sub(texto_imprimir, max(1, #texto_imprimir - 28))
+  sugerencia_actual = obtener_sugerencia_palabra()
+  local preview_sug = (config_autocomp == 1 and #sugerencia_actual > 0) and ("[" .. sugerencia_actual .. "]") or ""
+  
+  if #texto_imprimir + #preview_sug > 28 then
+    texto_imprimir = sub(texto_imprimir, max(1, #texto_imprimir + #preview_sug - 28))
   end
+  
   print(texto_imprimir, 6, 6, c_txt_dis)
+  if #preview_sug > 0 then
+    print(preview_sug, 6 + (#texto_imprimir * 4), 6, 6)
+  end
   print(#texto_nota_buffer .. "/120", 94, 16, c_btn_txt)
 
   local k_ancho = 16
@@ -798,10 +873,39 @@ function render_pantalla_teclado_virtual(c_fondo, c_display, c_txt_dis, c_btn_bs
       end
     end
   end
+
+  if config_autocomp == 1 then
+    local auto_lbls = {
+      "autocomp", -- 1. es
+      "autocomp", -- 2. en
+      "uzupeln.", -- 3. pl
+      "avtodop.", -- 4. ru
+      "autocomp", -- 5. pt
+      "autocomp", -- 6. it
+      "autocomp", -- 7. fr
+      "hokan",    -- 8. jp
+      "buquan",   -- 9. cn
+      "wanseong", -- 10. kr
+      "tamamla"   -- 11. tr
+    }
+    local pref_auto = auto_lbls[idioma_actual] or "autocomp"
+    local ty_extra = 103
+    local lbl_auto = (#sugerencia_actual > 0) and (pref_auto .. ": +" .. sugerencia_actual) or (pref_auto .. ": ---")
+    
+    if teclado_cy == 6 then
+      rectfill(8, ty_extra, 119, ty_extra + 9, c_btn_txt)
+      print(lbl_auto, 12, ty_extra + 2, c_btn_bse)
+    else
+      rectfill(8, ty_extra, 119, ty_extra + 9, c_btn_bse)
+      rect(8, ty_extra, 119, ty_extra + 9, c_display)
+      print(lbl_auto, 12, ty_extra + 2, (#sugerencia_actual > 0) and 10 or c_txt_dis)
+    end
+  end
   
-  -- [TRADUCCIÓN DINÁMICA]: Extraemos salir ("exit") y guardar ("save") de la matriz de idiomas
-  local txt_salir = textos_sistema[idioma_actual][14]
-  local txt_gdr = textos_sistema[idioma_actual][13]
+  local mat_lang = textos_sistema[idioma_actual]
+  local i13, i14 = 13, 14
+  local txt_salir = mat_lang[i14]
+  local txt_gdr = mat_lang[i13]
   print("b: " .. txt_salir .. "  (a): ok / " .. txt_gdr, 6, 118, (c_fondo == 15 or c_fondo == 7) and 0 or 7)
 end
 
@@ -918,7 +1022,7 @@ function render_pantalla_acercade()
     "--- " .. t_tit .. " ---",
     "",
     "app: add notes xtree",
-    t_ver .. " v0.05",
+    t_ver .. " v0.06",
     t_dev .. " martstartiv",
     t_ia .. " collaborative ai",
     "",
@@ -1009,45 +1113,111 @@ function eliminar_nota_seleccionada(idx)
 end
 
 -- [NUEVA FUNCIÓN CRÍTICA]: Motor único de serialización por bloques para TreeFrogUI
+
+-- Convierte 5 IDs de carácter (0..61) en un único número de 32 bits de PICO-8
+function empaquetar_5_chars(c1, c2, c3, c4, c5)
+  -- Los 16 bits altos (enteros, 0..32767) guardan c1 (6 bits), c2 (6 bits) y 3 bits de c3
+  local c3_alto = flr(c3 / 8)
+  local c3_bajo = c3 % 8
+  local parte_entera = c1 + (c2 * 64) + (c3_alto * 4096)
+  -- Los 16 bits bajos (fraccionarios / 65536) guardan 3 bits de c3, c4 (6 bits) y c5 (6 bits)
+  local parte_frac = (c3_bajo + (c4 * 8) + (c5 * 512)) / 65536
+  return parte_entera + parte_frac
+end
+
+-- Extrae los 5 IDs de carácter (0..61) desde un número de 32 bits de PICO-8
+function desempaquetar_5_chars(val)
+  local v = val or 0
+  if v < 0 then v = 0 end
+  local parte_entera = flr(v)
+  local parte_frac = flr((v - parte_entera) * 65536 + 0.5)
+
+  local c1 = parte_entera % 64
+  local c2 = flr(parte_entera / 64) % 64
+  local c3_alto = flr(parte_entera / 4096) % 8
+
+  local c3_bajo = parte_frac % 8
+  local c4 = flr(parte_frac / 8) % 64
+  local c5 = flr(parte_frac / 512) % 64
+
+  local c3 = (c3_alto * 8) + c3_bajo
+  return c1, c2, c3, c4, c5
+end
+
+
 function guardar_todo_en_sd()
   pcall(function()
-    -- 1. Guardamos configuraciones básicas nativas de fábrica
     dset(0, idioma_actual)
     dset(1, perfil_sexo)
     dset(2, idx_tema)
-    dset(3, #lista_notas) -- El Slot 3 vuelve a ser exclusivamente el total de notas como antes
+    dset(3, #lista_notas)
     
-    -- 2. Guardamos las nuevas configuraciones en el Slot 4 de forma aislada
-    local empaquetado_config = config_zoom + (config_motivacion * 10) + (btn_teclado_modo * 100)
+    local empaquetado_config = config_zoom + (config_motivacion * 10) + (btn_teclado_modo * 100) + (config_autocomp * 1000) + (config_alm_plus * 10000)
     dset(4, empaquetado_config)
     
-    -- 3. Tu motor original exacto de volcado de caracteres por bloques a la SD
-    for i = 1, total_notas_permitidas do
-      local slot_base = 10 + (i - 1) * 130
-      
-      if i <= #lista_notas then
-        local nota_str = lista_notas[i]
-        dset(slot_base, #nota_str)
-        
-        for c = 1, #nota_str do
-          local letra = sub(nota_str, c, c)
-          local id_char = 1 -- Espacio por defecto si falla
-          
-          for k = 1, #comp_dict do
-            if comp_dict[k] == letra then 
-              id_char = k 
-              break 
+    if config_alm_plus == 1 then
+      -- MOTOR PLUS COMPRIMIDO (5 caracteres por slot desde el Slot 5)
+      local puntero_slot = 5
+      for i = 1, total_notas_permitidas do
+        if i <= #lista_notas then
+          local nota_str = lista_notas[i]
+          local largo = #nota_str
+          dset(puntero_slot, largo)
+          puntero_slot = puntero_slot + 1
+
+          local ids = {}
+          for c = 1, largo do
+            local letra = sub(nota_str, c, c)
+            local id_char = 1
+            for k = 1, #comp_dict do
+              if comp_dict[k] == letra then
+                id_char = k
+                break
+              end
             end
+            add(ids, id_char)
           end
-          dset(slot_base + c, id_char)
+
+          for b = 1, largo, 5 do
+            local v1 = ids[b] or 0
+            local v2 = ids[b + 1] or 0
+            local v3 = ids[b + 2] or 0
+            local v4 = ids[b + 3] or 0
+            local v5 = ids[b + 4] or 0
+            dset(puntero_slot, empaquetar_5_chars(v1, v2, v3, v4, v5))
+            puntero_slot = puntero_slot + 1
+          end
+        else
+          dset(puntero_slot, 0)
+          puntero_slot = puntero_slot + 1
         end
-      else
-        -- Borramos el sector sobrante en la SD tal cual como lo programaste
-        dset(slot_base, 0)
+      end
+    else
+      -- MOTOR CLÁSICO ORIGINAL (1 carácter por slot desde el Slot 10)
+      for i = 1, total_notas_permitidas do
+        local slot_base = 10 + (i - 1) * 130
+        if i <= #lista_notas then
+          local nota_str = lista_notas[i]
+          dset(slot_base, #nota_str)
+          for c = 1, #nota_str do
+            local letra = sub(nota_str, c, c)
+            local id_char = 1
+            for k = 1, #comp_dict do
+              if comp_dict[k] == letra then 
+                id_char = k 
+                break 
+              end
+            end
+            dset(slot_base + c, id_char)
+          end
+        else
+          dset(slot_base, 0)
+        end
       end
     end
   end)
 end
+
 
 function cargar_configuracion_inicial()
   local lang, sex, tema = 0, 0, 0
@@ -1064,40 +1234,67 @@ function cargar_configuracion_inicial()
     idx_tema = (tema >= 1 and tema <= 7) and tema or 1
     
     lista_notas = {}
-    -- Recuperamos el total de notas real de tu Slot 3 original
     local total_g = dget(3) or 0
     if total_g < 0 or total_g > total_notas_permitidas then total_g = 0 end
     
-    -- Recuperamos las opciones adicionales del Slot 4 sin interferir con las notas
     local empaquetado_config = dget(4) or 0
     config_zoom = empaquetado_config % 10
     config_motivacion = flr((empaquetado_config % 100) / 10)
-    btn_teclado_modo = flr(empaquetado_config / 100)
+    btn_teclado_modo = flr((empaquetado_config % 1000) / 100)
+    config_autocomp = flr((empaquetado_config % 10000) / 1000)
+    config_alm_plus = flr(empaquetado_config / 10000)
     
-    -- Escudos protectores por rango
     if config_zoom < 0 or config_zoom > 1 then config_zoom = 0 end
     if config_motivacion < 0 or config_motivacion > 1 then config_motivacion = 0 end
     if btn_teclado_modo < 0 or btn_teclado_modo > 4 then btn_teclado_modo = 0 end
+    if config_autocomp < 0 or config_autocomp > 1 then config_autocomp = 0 end
+    if config_alm_plus < 0 or config_alm_plus > 1 then config_alm_plus = 0 end
     
-    -- [RECONSTRUCCIÓN REAL COMPATIBLE FIJA]: Recupera tus strings tal cual como antes
-    for i = 1, total_g do
-      local slot_base = 10 + (i - 1) * 130
-      local longitud_texto = dget(slot_base) or 0
-      
-      if longitud_texto < 0 or longitud_texto > 120 then longitud_texto = 0 end
-      
-      local texto_reconstruido = ""
-      for c = 1, longitud_texto do
-        local id_char = dget(slot_base + c) or 1
-        if id_char >= 1 and id_char <= #comp_dict then
-          texto_reconstruido = texto_reconstruido .. comp_dict[id_char]
-        else
-          texto_reconstruido = texto_reconstruido .. " "
+    if config_alm_plus == 1 then
+      -- LECTURA MOTOR PLUS COMPRIMIDO (Slot 5+)
+      local puntero_slot = 5
+      for i = 1, total_g do
+        local largo = dget(puntero_slot) or 0
+        puntero_slot = puntero_slot + 1
+        if largo < 0 or largo > 120 then largo = 0 end
+
+        local texto_reconstruido = ""
+        local bloques = flr((largo + 4) / 5)
+        for b = 1, bloques do
+          local c1, c2, c3, c4, c5 = desempaquetar_5_chars(dget(puntero_slot))
+          puntero_slot = puntero_slot + 1
+          local grupo = {c1, c2, c3, c4, c5}
+          for g = 1, 5 do
+            if #texto_reconstruido < largo then
+              local id_c = grupo[g]
+              if id_c >= 1 and id_c <= #comp_dict then
+                texto_reconstruido = texto_reconstruido .. comp_dict[id_c]
+              else
+                texto_reconstruido = texto_reconstruido .. " "
+              end
+            end
+          end
         end
+        add(lista_notas, texto_reconstruido)
       end
-      
-      -- Inserta el texto real completo del usuario en la memoria RAM
-      add(lista_notas, texto_reconstructed or texto_reconstruido)
+    else
+      -- LECTURA MOTOR CLÁSICO ORIGINAL (Slot 10+)
+      for i = 1, total_g do
+        local slot_base = 10 + (i - 1) * 130
+        local longitud_texto = dget(slot_base) or 0
+        if longitud_texto < 0 or longitud_texto > 120 then longitud_texto = 0 end
+        
+        local texto_reconstruido = ""
+        for c = 1, longitud_texto do
+          local id_char = dget(slot_base + c) or 1
+          if id_char >= 1 and id_char <= #comp_dict then
+            texto_reconstruido = texto_reconstruido .. comp_dict[id_char]
+          else
+            texto_reconstruido = texto_reconstruido .. " "
+          end
+        end
+        add(lista_notas, texto_reconstruido)
+      end
     end
     
     modo_actual = 2 
@@ -1106,16 +1303,19 @@ function cargar_configuracion_inicial()
   end
 end
 
-
 function actualizar_opciones_adicionales()
-  -- Si está abierta la subventana de mapeo/testeo, le cedemos el control exclusivo
   if sub_btn_abierta then
     actualizar_subventana_botones()
     return
   end
 
-  if btnp(2) then config_cursor = config_cursor - 1 if config_cursor < 1 then config_cursor = 5 end end
-  if btnp(3) then config_cursor = config_cursor + 1 if config_cursor > 5 then config_cursor = 1 end end
+  if aviso_plus_abierto then
+    actualizar_aviso_alm_plus()
+    return
+  end
+
+  if btnp(2) then config_cursor = config_cursor - 1 if config_cursor < 1 then config_cursor = 7 end end
+  if btnp(3) then config_cursor = config_cursor + 1 if config_cursor > 7 then config_cursor = 1 end end
 
   if btnp(5) or stat(30) == 14 then
     config_abierta = false
@@ -1151,13 +1351,14 @@ function actualizar_opciones_adicionales()
       config_zoom = 0
       config_motivacion = 0
       btn_teclado_modo = 0
+      config_autocomp = 0
+      config_alm_plus = 0
       config_abierta = false
       modo_actual = 0 
       return
     end
 
   elseif config_cursor == 5 then
-    -- Abre la subventana emergente de mapeo y testeo de botones
     if btnp(4) or stat(30) == 13 then
       sub_btn_abierta = true
       sub_btn_cursor = 1
@@ -1167,76 +1368,197 @@ function actualizar_opciones_adicionales()
       bloqueo_a = true
       return
     end
+
+  elseif config_cursor == 6 then
+    if btnp(0) or btnp(1) then
+      config_autocomp = (config_autocomp == 0) and 1 or 0
+    end
+
+  elseif config_cursor == 7 then
+    -- Abre confirmación antes de cambiar entre Clásico y Alm. Plus
+    if btnp(0) or btnp(1) or btnp(4) or stat(30) == 13 then
+      aviso_plus_abierto = true
+      aviso_plus_cursor = 2 -- Por seguridad inicia seleccionado en "cancelar"
+      bloqueo_a = true
+      return
+    end
+  end
+end
+
+
+function actualizar_aviso_alm_plus()
+  -- Si pulsa B, cancela y vuelve a la ventana de configuraciones adicionales
+  if btnp(5) or stat(30) == 14 then
+    aviso_plus_abierto = false
+    bloqueo_a = false
+    return
+  end
+
+  if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
+    aviso_plus_cursor = (aviso_plus_cursor == 1) and 2 or 1
+  end
+
+  if btn(4) or stat(30) == 13 then
+    if not bloqueo_a then
+      bloqueo_a = true
+      if aviso_plus_cursor == 1 then
+        -- ACEPTAR: Limpia notas incompatibles, guarda el cambio y vuelve al menú principal
+        lista_notas = {}
+        config_alm_plus = (config_alm_plus == 0) and 1 or 0
+        pcall(function()
+          for s = 5, 1310 do dset(s, 0) end
+        end)
+        guardar_todo_en_sd()
+        aviso_texto = "ok!"
+        aviso_timer = 35
+        aviso_plus_abierto = false
+        config_abierta = false
+        cursor_menu = 1
+        cooldown_teclado = 10
+      else
+        -- CANCELAR: Cierra solo el aviso y regresa a configuraciones adicionales
+        aviso_plus_abierto = false
+      end
+    end
+  else
+    bloqueo_a = false
   end
 end
 
 function render_ventana_opciones_adicionales(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
   local t_config = {
-    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacion", "formatear", "si", "no", "b: salir/grv", "map/test btn"},
-    {"extra cfgs",   "text zoom",  "lang/idioma", "motivation", "wipe clear", "yes","no", "b: exit/save", "btn map/test"},
-    {"cfg. dodatk",  "zoom tekstu", "jezyk/lang", "motywacja",  "czyszczenie", "tak","nie","b: wyjdz/zap", "map/test btn"},
-    {"dop. nastr",   "masshtab",   "yazik/lang",  "motivaciya", "ochistka",   "da", "net","b: vyhod/shran","test knopok"},
-    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacao",  "formatar",   "sim","nao","b: sair/salv", "map/test btn"},
-    {"cfg. extra",   "zoom testo", "lingua/lang", "motivazione","formatta",   "si", "no", "b: esci/salv", "map/test btn"},
-    {"cfg. extras",  "zoom texte", "langue/lang", "motivation", "effacer to", "oui","non","b: sortir/grd", "map/test btn"},
-    {"sono hoka",    "moji zoom",  "gengo/lang",  "douki zuke", "shokika",    "hai","iie","b: modoru/hoz", "btn map/test"},
-    {"geng duo she", "zi ti da xiao","yu yan/lang","ji li",       "qing chu",   "shi","fou","b: tui chu/bao","anjian ceshi"},
-    {"gita seolt",   "geulja zoom","eoneo/lang",  "donggi buyeo","gongjang ch","ye", "ani","b: nagagi/jeo", "beoteun teseu"},
-    {"ek ayarlar",   "metin zoomu", "dil/lang",    "motivasyon", "sifirla",    "evet","hayir","b: cikis/kayd","tus test/ayar"}
+    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacion", "formatear", "si", "no", "b: salir/grv", "map/test btn", "autocomplet.", "alm. plus"},
+    {"extra cfgs",   "text zoom",  "lang/idioma", "motivation", "wipe clear", "yes","no", "b: exit/save", "btn map/test", "autocomplete", "storage plus"},
+    {"cfg. dodatk",  "zoom tekstu", "jezyk/lang", "motywacja",  "czyszczenie", "tak","nie","b: wyjdz/zap", "map/test btn", "autouzupeln.", "pamiec plus"},
+    {"dop. nastr",   "masshtab",   "yazik/lang",  "motivaciya", "ochistka",   "da", "net","b: vyhod/shran","test knopok",  "avtodopoln.",  "pamyat plus"},
+    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacao",  "formatar",   "sim","nao","b: sair/salv", "map/test btn", "autocomplet.", "armaz. plus"},
+    {"cfg. extra",   "zoom testo", "lingua/lang", "motivazione","formatta",   "si", "no", "b: esci/salv", "map/test btn", "autocomplet.", "memoria plus"},
+    {"cfg. extras",  "zoom texte", "langue/lang", "motivation", "effacer to", "oui","non","b: sortir/grd", "map/test btn", "autocomplet.", "stock. plus"},
+    {"sono hoka",    "moji zoom",  "gengo/lang",  "douki zuke", "shokika",    "hai","iie","b: modoru/hoz", "btn map/test", "jidou hokan",  "hozon plus"},
+    {"geng duo she", "zi ti da xiao","yu yan/lang","ji li",       "qing chu",   "shi","fou","b: tui chu/bao","anjian ceshi", "zidong buquan","cunchu plus"},
+    {"gita seolt",   "geulja zoom","eoneo/lang",  "donggi buyeo","gongjang ch","ye", "ani","b: nagagi/jeo", "beoteun teseu","jadong wanseo","jeojang plus"},
+    {"ek ayarlar",   "metin zoomu", "dil/lang",    "motivasyon", "sifirla",    "evet","hayir","b: cikis/kayd","tus test/ayar","otomatik tam.","depolama plus"}
   }
 
   local m_data = t_config[idioma_actual]
-  local vx, vy, vw, vh = 12, 13, 104, 104
+  local k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11 = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+  local vx, vy, vw, vh = 12, 4, 104, 120
   
   rectfill(vx, vy, vx + vw, vy + vh, 0)         
   rect(vx, vy, vx + vw, vy + vh, c_btn_bse)     
-  rectfill(vx + 2, vy + 2, vx + vw - 2, vy + 12, c_display) 
-  print(m_data[1], vx + 6, vy + 4, c_txt_dis)   
+  rectfill(vx + 2, vy + 2, vx + vw - 2, vy + 10, c_display) 
+  print(m_data[k1], vx + 6, vy + 3, c_txt_dis)   
   
   -- Fila 1: Zoom de letra
-  local ly1 = vy + 17
-  if config_cursor == 1 then rectfill(vx + 4, ly1 - 2, vx + vw - 4, ly1 + 6, c_btn_bse) end
-  print(m_data[2] .. ":", vx + 6, ly1, config_cursor == 1 and c_btn_txt or c_txt_dis)
+  local ly1 = vy + 14
+  if config_cursor == 1 then rectfill(vx + 4, ly1 - 1, vx + vw - 4, ly1 + 6, c_btn_bse) end
+  print(m_data[k2] .. ":", vx + 6, ly1, config_cursor == 1 and c_btn_txt or c_txt_dis)
   print(config_zoom == 1 and "on" or "off", vx + 80, ly1, config_zoom == 1 and 10 or 8)
   
   -- Fila 2: Idioma rápido
-  local ly2 = vy + 32
-  if config_cursor == 2 then rectfill(vx + 4, ly2 - 2, vx + vw - 4, ly2 + 6, c_btn_bse) end
-  print(m_data[3] .. ":", vx + 6, ly2, config_cursor == 2 and c_btn_txt or c_txt_dis)
+  local ly2 = vy + 26
+  if config_cursor == 2 then rectfill(vx + 4, ly2 - 1, vx + vw - 4, ly2 + 6, c_btn_bse) end
+  print(m_data[k3] .. ":", vx + 6, ly2, config_cursor == 2 and c_btn_txt or c_txt_dis)
   print("<" .. codigos_idioma[idioma_actual] .. ">", vx + 74, ly2, 11)
   
   -- Fila 3: Motivación
-  local ly3 = vy + 47
-  if config_cursor == 3 then rectfill(vx + 4, ly3 - 2, vx + vw - 4, ly3 + 6, c_btn_bse) end
-  print(m_data[4] .. ":", vx + 6, ly3, config_cursor == 3 and c_btn_txt or c_txt_dis)
+  local ly3 = vy + 38
+  if config_cursor == 3 then rectfill(vx + 4, ly3 - 1, vx + vw - 4, ly3 + 6, c_btn_bse) end
+  print(m_data[k4] .. ":", vx + 6, ly3, config_cursor == 3 and c_btn_txt or c_txt_dis)
   print(config_motivacion == 1 and "on" or "off", vx + 80, ly3, config_motivacion == 1 and 10 or 8)
   
   -- Fila 4: Formateo de Fábrica
-  local ly4 = vy + 62
-  if config_cursor == 4 then rectfill(vx + 4, ly4 - 2, vx + vw - 4, ly4 + 6, c_btn_bse) end
-  print(m_data[5], vx + 6, ly4, config_cursor == 4 and c_btn_txt or 8)
-  
+  local ly4 = vy + 50
+  if config_cursor == 4 then rectfill(vx + 4, ly4 - 1, vx + vw - 4, ly4 + 6, c_btn_bse) end
+  print(m_data[k5], vx + 6, ly4, config_cursor == 4 and c_btn_txt or 8)
   if confirma_borrado then
     rectfill(vx + 76, ly4 - 1, vx + 98, ly4 + 5, 8) 
-    print(m_data[6], vx + 78, ly4, 7)
+    print(m_data[k6], vx + 78, ly4, 7)
   else
     rectfill(vx + 76, ly4 - 1, vx + 98, ly4 + 5, 12) 
-    print(m_data[7], vx + 78, ly4, 7)
+    print(m_data[k7], vx + 78, ly4, 7)
   end
 
-  -- Fila 5: Nueva opción de Mapeo y Testeo Técnico de Botones
-  local ly5 = vy + 77
-  if config_cursor == 5 then rectfill(vx + 4, ly5 - 2, vx + vw - 4, ly5 + 6, c_btn_bse) end
-  print(m_data[9], vx + 6, ly5, config_cursor == 5 and c_btn_txt or 11)
+  -- Fila 5: Mapeo y Testeo Técnico de Botones
+  local ly5 = vy + 62
+  if config_cursor == 5 then rectfill(vx + 4, ly5 - 1, vx + vw - 4, ly5 + 6, c_btn_bse) end
+  print(m_data[k9], vx + 6, ly5, config_cursor == 5 and c_btn_txt or 11)
   print("[>]", vx + 84, ly5, config_cursor == 5 and c_btn_txt or 10)
-  
-  print(m_data[8], vx + 14, vy + 93, 6)
 
-  -- Si la subventana emergente de botones está activa, se dibuja encima
+  -- Fila 6: Autocompletado
+  local ly6 = vy + 74
+  if config_cursor == 6 then rectfill(vx + 4, ly6 - 1, vx + vw - 4, ly6 + 6, c_btn_bse) end
+  print(m_data[k10] .. ":", vx + 6, ly6, config_cursor == 6 and c_btn_txt or c_txt_dis)
+  print(config_autocomp == 1 and "on" or "off", vx + 80, ly6, config_autocomp == 1 and 10 or 8)
+
+  -- Fila 7: Almacenamiento Extra Plus
+  local ly7 = vy + 86
+  if config_cursor == 7 then rectfill(vx + 4, ly7 - 1, vx + vw - 4, ly7 + 6, c_btn_bse) end
+  print(m_data[k11] .. ":", vx + 6, ly7, config_cursor == 7 and c_btn_txt or 10)
+  print(config_alm_plus == 1 and "on" or "off", vx + 80, ly7, config_alm_plus == 1 and 10 or 8)
+  
+  print(m_data[k8], vx + 14, vy + 106, 6)
+
   if sub_btn_abierta then
     render_subventana_botones(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
   end
+
+  if aviso_plus_abierto then
+    render_aviso_alm_plus()
+  end
 end
+
+
+function render_aviso_alm_plus()
+  local t_aviso = {
+    {"atencion!", "las notas previas", "dejaran de verse", "y se borraran.", "aceptar", "cancelar"},   -- 1. es
+    {"warning!",  "previous notes",    "will no longer be", "visible & erased.", "accept", "cancel"},    -- 2. en
+    {"uwaga!",    "poprzednie notatki","przestana byc",     "widoczne/usuniete.","akceptuj","anuluj"},    -- 3. pl
+    {"vnimanie!", "starye zametki",    "budut nedostupny",  "i udalyatsya.",    "prinyat", "otmena"},    -- 4. ru
+    {"atencao!",  "as notas antigas",  "deixarao de ser",   "vistas e apagadas.","aceitar", "cancelar"},  -- 5. pt
+    {"attenz.!",  "le note precedenti","non saranno piu",   "visibili/cancell.","accetta", "annulla"},   -- 6. it
+    {"attention!","les notes actuelles","ne seront plus",    "visibles/effacees.","accepter","annuler"},   -- 7. fr
+    {"chuui!",    "ima made no memo",  "wa mienaku nari",   "sakujo saremasu.", "doui",    "chuushi"},   -- 8. jp
+    {"jinggao!",  "zhiqian de biji",   "jiang wufa xianshi","bing bei shanchu.","queding", "quxiao"},    -- 9. cn
+    {"juui!",     "ijeon memoneun",    "boiji anhge doemyeo","sakje doemnida.",  "surok",   "chwiso"},    -- 10. kr
+    {"dikkat!",   "onceki notlar",     "gorunmeyecek ve",   "silinecektir.",    "kabul",   "iptal"}      -- 11. tr
+  }
+
+  local a_data = t_aviso[idioma_actual]
+  local p1, p2, p3, p4, p5, p6 = 1, 2, 3, 4, 5, 6
+  local ax, ay, aw, ah = 10, 26, 108, 76
+
+  rectfill(ax, ay, ax + aw, ay + ah, 0)
+  rect(ax, ay, ax + aw, ay + ah, 8)
+  rectfill(ax + 2, ay + 2, ax + aw - 2, ay + 11, 8)
+  print(a_data[p1], ax + 6, ay + 4, 7)
+
+  print(a_data[p2], ax + 6, ay + 18, 7)
+  print(a_data[p3], ax + 6, ay + 27, 7)
+  print(a_data[p4], ax + 6, ay + 36, 10)
+
+  local y_btn = ay + 53
+  -- Botón ACEPTAR (1)
+  local c1_x = ax + 29 - (#a_data[p5] * 2)
+  if aviso_plus_cursor == 1 then
+    rectfill(ax + 6, y_btn, ax + 52, y_btn + 11, 8)
+    print(a_data[p5], c1_x, y_btn + 3, 7)
+  else
+    rect(ax + 6, y_btn, ax + 52, y_btn + 11, 8)
+    print(a_data[p5], c1_x, y_btn + 3, 8)
+  end
+
+  -- Botón CANCELAR (2)
+  local c2_x = ax + 79 - (#a_data[p6] * 2)
+  if aviso_plus_cursor == 2 then
+    rectfill(ax + 56, y_btn, ax + 102, y_btn + 11, 11)
+    print(a_data[p6], c2_x, y_btn + 3, 0)
+  else
+    rect(ax + 56, y_btn, ax + 102, y_btn + 11, 3)
+    print(a_data[p6], c2_x, y_btn + 3, 11)
+  end
+end
+
 
 
 -- =========================================================
@@ -1338,32 +1660,47 @@ function render_subventana_botones(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
     {"tus test/ayar",  "abc/123 tusu:",  "tus monitoru:",    "uygula",   "reddet",   "b: kaydetsiz cik"}   -- 11. tr
   }
 
-  local s_data = t_sub_btn[idioma_actual]
-  local sx, sy, sw, sh = 6, 10, 116, 108
-  local nombres_map = {"default", "b+arr", "b+aba", "b+izq", "b+der"}
+  local t_nombres_map = {
+    {"defecto", "b+arr",   "b+aba",   "b+izq",    "b+der"},    -- 1. es
+    {"default", "b+up",    "b+down",  "b+left",   "b+right"},  -- 2. en
+    {"domysl.", "b+gora",  "b+dol",   "b+lewo",   "b+prawo"},  -- 3. pl
+    {"umolch.", "b+vverh", "b+vniz",  "b+levo",   "b+pravo"},  -- 4. ru
+    {"padrao",  "b+cima",  "b+baixo", "b+esq",    "b+dir"},    -- 5. pt
+    {"default", "b+su",    "b+giu",   "b+sin",    "b+des"},    -- 6. it
+    {"defaut",  "b+haut",  "b+bas",   "b+gauche", "b+droite"}, -- 7. fr
+    {"kihon",   "b+ue",    "b+shita", "b+hidari", "b+migi"},   -- 8. jp
+    {"moren",   "b+shang", "b+xia",   "b+zuo",    "b+you"},    -- 9. cn
+    {"gibon",   "b+wi",    "b+arae",  "b+oen",    "b+oreun"},  -- 10. kr
+    {"varsay.", "b+ust",   "b+alt",   "b+sol",    "b+sag"}     -- 11. tr
+  }
 
-  -- Marco emergente principal
+  local s_data = t_sub_btn[idioma_actual]
+  local nombres_map = t_nombres_map[idioma_actual]
+  local j1, j2, j3, j4, j5, j6 = 1, 2, 3, 4, 5, 6
+  local sx, sy, sw, sh = 6, 10, 116, 108
+
   rectfill(sx, sy, sx + sw, sy + sh, 0)
   rect(sx, sy, sx + sw, sy + sh, 11)
   rectfill(sx + 2, sy + 2, sx + sw - 2, sy + 11, c_display)
-  print(s_data[1], sx + 6, sy + 4, 7)
+  print(s_data[j1], sx + 6, sy + 4, 7)
 
-  -- Bloque 1: Selector de asignación para abc/123 en teclado virtual
   local y_map = sy + 16
   if sub_btn_cursor == 1 then
     rectfill(sx + 4, y_map - 2, sx + sw - 4, y_map + 13, c_btn_bse)
   else
     rect(sx + 4, y_map - 2, sx + sw - 4, y_map + 13, 5)
   end
-  print(s_data[2], sx + 7, y_map, sub_btn_cursor == 1 and c_btn_txt or 6)
-  print("< " .. nombres_map[btn_teclado_temp + 1] .. " >", sx + 62, y_map + 6, 10)
+  print(s_data[j2], sx + 7, y_map, sub_btn_cursor == 1 and c_btn_txt or 6)
 
-  -- Bloque 2: Panel visual de testeo en tiempo real (indicadores por color)
+  local idx_map = btn_teclado_temp + 1
+  local txt_combo = "< " .. nombres_map[idx_map] .. " >"
+  local cx_combo = (sx + sw - 6) - (#txt_combo * 4)
+  print(txt_combo, cx_combo, y_map + 6, 10)
+
   local y_tst = sy + 34
   rect(sx + 4, y_tst, sx + sw - 4, y_tst + 46, 5)
-  print(s_data[3], sx + 7, y_tst + 3, 7)
+  print(s_data[j3], sx + 7, y_tst + 3, 7)
 
-  -- Cajas indicadoras P1 (D-Pad y A)
   local function caja_btn(bx, by, txt, activo, col_on)
     rectfill(bx, by, bx + 15, by + 8, activo and col_on or 1)
     print(txt, bx + 2, by + 2, activo and 0 or 5)
@@ -1374,9 +1711,8 @@ function render_subventana_botones(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
   caja_btn(sx + 43, y_tst + 12, "arr", btn(2), 12)
   caja_btn(sx + 61, y_tst + 12, "aba", btn(3), 12)
   caja_btn(sx + 79, y_tst + 12, " a ", btn(4), 11)
-  caja_btn(sx + 97, y_tst + 12, "b:x", false, 8) -- B reservado para volver
+  caja_btn(sx + 97, y_tst + 12, "b:x", false, 8)
 
-  -- Cajas indicadoras P2 / Extra en libretro (L1, R1, Sel, Str, Aux)
   caja_btn(sx + 7,  y_tst + 23, "l1 ", btn(4, 1), 14)
   caja_btn(sx + 25, y_tst + 23, "r1 ", btn(5, 1), 14)
   caja_btn(sx + 43, y_tst + 23, "sel", btn(2, 1), 9)
@@ -1384,14 +1720,11 @@ function render_subventana_botones(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
   caja_btn(sx + 79, y_tst + 23, "p2l", btn(0, 1), 10)
   caja_btn(sx + 97, y_tst + 23, "p2r", btn(1, 1), 10)
 
-  -- Reporte técnico textual en vivo con color del último botón pulsado
   print("reg: " .. ultimo_btn_reg, sx + 7, y_tst + 36, ultimo_btn_col)
 
-  -- Bloque 3: Tres botones inferiores [aplicar] (2) | [default] (3) | [rechazar] (4)
   local y_acc = sy + 85
 
-  -- 1. Botón APLICAR (cursor 2)
-  local lbl_apl = sub(s_data[4], 1, 7)
+  local lbl_apl = sub(s_data[j4], 1, 7)
   local ax1 = sx + 22 - (#lbl_apl * 2)
   if sub_btn_cursor == 2 then
     rectfill(sx + 4, y_acc, sx + 39, y_acc + 10, 11)
@@ -1401,18 +1734,17 @@ function render_subventana_botones(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
     print(lbl_apl, ax1, y_acc + 2, 11)
   end
 
-  -- 2. Botón DEFAULT (cursor 3)
-  local dx1 = sx + 58 - 14 -- centrado de "default" (7 chars * 2)
+  local lbl_def = sub(nombres_map[j1], 1, 7)
+  local dx1 = sx + 58 - (#lbl_def * 2)
   if sub_btn_cursor == 3 then
     rectfill(sx + 41, y_acc, sx + 75, y_acc + 10, 10)
-    print("default", dx1, y_acc + 2, 0)
+    print(lbl_def, dx1, y_acc + 2, 0)
   else
     rect(sx + 41, y_acc, sx + 75, y_acc + 10, 9)
-    print("default", dx1, y_acc + 2, 10)
+    print(lbl_def, dx1, y_acc + 2, 10)
   end
 
-  -- 3. Botón RECHAZAR (cursor 4)
-  local lbl_rec = sub(s_data[5], 1, 7)
+  local lbl_rec = sub(s_data[j5], 1, 7)
   local rx1 = sx + 94 - (#lbl_rec * 2)
   if sub_btn_cursor == 4 then
     rectfill(sx + 77, y_acc, sx + 112, y_acc + 10, 8)
@@ -1422,7 +1754,6 @@ function render_subventana_botones(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
     print(lbl_rec, rx1, y_acc + 2, 8)
   end
 
-  -- Pie de ventana centrado dinámicamente según longitud del idioma
-  local px = 64 - (#s_data[6] * 2)
-  print(s_data[6], px, sy + 99, 6)
+  local px = 64 - (#s_data[j6] * 2)
+  print(s_data[j6], px, sy + 99, 6)
 end
