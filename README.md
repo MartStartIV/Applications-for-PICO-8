@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.03</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.04</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,7 +188,15 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.20 (Add Notes Xtree V0.06) - current version</h4>
+    <h4>Version 0.21 (Counter Games Xtree V0.04) - current version</h4>
+    <ul>
+      <li>The search system has been improved, both for adding games and for achievement categories.</li>
+      <li>The search tool now adapts better to the graphical interface.</li>
+      <li>While viewing a game, you can now deselect achievement categories that are not relevant to you; these will be marked with a specific indicator.</li>
+      <li>These improvements have been integrated across all themes.</li>
+      <li>Several bugs have been fixed.</li>
+    </ul>
+    <h4>Version 0.20 (Add Notes Xtree V0.06)</h4>
     <ul>
       <li>New option added under "Additional Options".</li>
       <li>You can now enable word auto completion, powered by an integrated mini dictionary; this also adds a new key to the app's virtual keyboard.</li>
@@ -198,7 +206,7 @@
       <li>The data compression system has been improved, allowing for more information to be stored compared to previous versions (note: any data saved from previous versions will become invalid when using this mode).</li>
       <li>A new feature has been added under "Additional Options" that significantly increases data storage capacity through more aggressive compression. Please note that enabling this feature requires deleting existing records due to limitations in the file format used for storage; this is an optional setting and is distinct from the improvement mentioned in the previous point.</li>
     </ul>
-    <h4>Version 0.19 (Counter Games Xtree V0.03) - current version</h4>
+    <h4>Version 0.19 (Counter Games Xtree V0.03)</h4>
     <ul>
       <li>UI themes with zoom applied now feature scrolling text, ensuring the full content is displayed.</li>
       <li>Three new design themes have been added, taking into account all previously implemented features.</li>
