@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.03]
+-- proyecto: counter games xtree [v0.04]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.03"
+  app_ver = "v0.04"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -814,10 +814,10 @@ function filtrar_juegos_db()
   for i = 1, #juegos_db do
     if contiene_subcadena(juegos_db[i], q) then
       add(busq_resultados, i)
-      if #busq_resultados >= 30 then break end
+      if #busq_resultados >= 45 then break end
     end
   end
-  busq_cursor = 1
+  busq_cursor = (#busq_resultados > 0) and 1 or 0
 end
 
 function actualizar_buscador_juegos()
@@ -848,17 +848,8 @@ function actualizar_buscador_juegos()
         tk_pag = (tk_pag == 1) and 2 or 1
         tk_x = 1
       elseif tecla == "ok" then
-        if #busq_resultados > 0 then
-          busq_foco = 2
-          busq_cursor = 1
-        elseif #limpiar_espacios_der(busq_texto) > 0 then
-          local nuevo_g = crear_objeto_juego(0, limpiar_espacios_der(busq_texto))
-          add(mis_juegos, nuevo_g)
-          guardar_datos()
-          juego_sel = #mis_juegos + 1
-          mostrar_aviso(tr(33), 45)
-          cambiar_estado(2)
-        end
+        busq_foco = 2
+        busq_cursor = (#busq_resultados > 0) and 1 or 0
       else
         if #busq_texto < 16 then
           busq_texto = busq_texto .. tecla
@@ -867,34 +858,56 @@ function actualizar_buscador_juegos()
       end
     end
   else
+    local tot_r = #busq_resultados
+    local tiene_custom = (#limpiar_espacios_der(busq_texto) > 0)
+    local max_c = tot_r + (tiene_custom and 1 or 0)
+
     if btnp(2) then
       busq_cursor = busq_cursor - 1
-      if busq_cursor < 1 then busq_foco = 1 end
+      if busq_cursor < 0 then busq_cursor = max_c end
     elseif btnp(3) then
       busq_cursor = busq_cursor + 1
-      if busq_cursor > #busq_resultados then busq_cursor = 1 end
+      if busq_cursor > max_c then busq_cursor = 0 end
     elseif btnp(4) then
-      local id_elegido = busq_resultados[busq_cursor]
-      if id_elegido then
-        local ya_esta = false
-        for j = 1, #mis_juegos do
-          if mis_juegos[j].id_juego == id_elegido then ya_esta = true break end
+      if busq_cursor == 0 then
+        busq_foco = 1
+      elseif busq_cursor <= tot_r then
+        local id_elegido = busq_resultados[busq_cursor]
+        if id_elegido then
+          local ya_esta = false
+          for j = 1, #mis_juegos do
+            if mis_juegos[j].id_juego == id_elegido then ya_esta = true break end
+          end
+          if ya_esta then
+            mostrar_aviso(tr(34), 40)
+          else
+            local nuevo_g = crear_objeto_juego(id_elegido, nil)
+            add(mis_juegos, nuevo_g)
+            guardar_datos()
+            juego_sel = #mis_juegos + 1
+            mostrar_aviso(tr(33), 45)
+            cambiar_estado(2)
+          end
         end
-        if ya_esta then
-          mostrar_aviso(tr(34), 40)
-        else
-          local nuevo_g = crear_objeto_juego(id_elegido, nil)
-          add(mis_juegos, nuevo_g)
-          guardar_datos()
-          juego_sel = #mis_juegos + 1
-          mostrar_aviso(tr(33), 45)
-          cambiar_estado(2)
-        end
+      elseif tiene_custom then
+        local nuevo_g = crear_objeto_juego(0, limpiar_espacios_der(busq_texto))
+        add(mis_juegos, nuevo_g)
+        guardar_datos()
+        juego_sel = #mis_juegos + 1
+        mostrar_aviso(tr(33), 45)
+        cambiar_estado(2)
       end
     end
   end
 end
 
+
+function cat_esta_activa(g, cid)
+  for c = 1, #g.cats do
+    if g.cats[c] == cid then return c end
+  end
+  return 0
+end
 
 function filtrar_cats_db()
   busq_resultados = {}
@@ -904,7 +917,7 @@ function filtrar_cats_db()
       add(busq_resultados, i)
     end
   end
-  busq_cursor = 1
+  busq_cursor = (#busq_resultados > 0) and 1 or 0
 end
 
 function actualizar_buscador_categorias()
@@ -918,6 +931,8 @@ function actualizar_buscador_categorias()
       busq_texto = sub(busq_texto, 1, #busq_texto - 1)
       filtrar_cats_db()
     else
+      cat_cursor = 1
+      cat_scroll = 0
       cambiar_estado(4)
     end
     return
@@ -938,10 +953,8 @@ function actualizar_buscador_categorias()
         tk_pag = (tk_pag == 1) and 2 or 1
         tk_x = 1
       elseif tecla == "ok" then
-        if #busq_resultados > 0 then
-          busq_foco = 2
-          busq_cursor = 1
-        end
+        busq_foco = 2
+        busq_cursor = (#busq_resultados > 0) and 1 or 0
       else
         if #busq_texto < 12 then
           busq_texto = busq_texto .. tecla
@@ -950,30 +963,38 @@ function actualizar_buscador_categorias()
       end
     end
   else
+    local tot_r = #busq_resultados
     if btnp(2) then
       busq_cursor = busq_cursor - 1
-      if busq_cursor < 1 then busq_foco = 1 end
+      if busq_cursor < 0 then busq_cursor = tot_r end
     elseif btnp(3) then
       busq_cursor = busq_cursor + 1
-      if busq_cursor > #busq_resultados then busq_cursor = 1 end
+      if busq_cursor > tot_r then busq_cursor = 0 end
     elseif btnp(4) then
-      if #g.cats >= 12 then
-        mostrar_aviso("max 12 cats!", 40)
+      if busq_cursor == 0 then
+        busq_foco = 1
       else
         local cid = busq_resultados[busq_cursor]
         if cid then
-          local existe = false
-          for c = 1, #g.cats do
-            if g.cats[c] == cid then existe = true break end
-          end
-          if existe then
-            mostrar_aviso(tr(34), 35)
+          local pos = cat_esta_activa(g, cid)
+          if pos > 0 then
+            if #g.cats <= 1 then
+              mostrar_aviso("min 1 cat!", 35)
+            else
+              deli(g.cats, pos)
+              deli(g.vals, pos)
+              guardar_datos()
+              mostrar_aviso("- " .. cat_tr(cid), 30)
+            end
           else
-            add(g.cats, cid)
-            add(g.vals, 0)
-            guardar_datos()
-            mostrar_aviso("+ " .. cat_tr(cid), 40)
-            cambiar_estado(4)
+            if #g.cats >= 12 then
+              mostrar_aviso("max 12 cats!", 35)
+            else
+              add(g.cats, cid)
+              add(g.vals, 0)
+              guardar_datos()
+              mostrar_aviso("+ " .. cat_tr(cid), 30)
+            end
           end
         end
       end
@@ -1346,7 +1367,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.03", 12, 7, 7)
+  print("counter games xtree v0.04", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -1605,6 +1626,57 @@ function dibujar_teclado_moderno(y_ini, c_pan, c_txt, c_acc, c_atxt)
   end
 end
 
+function dibujar_fila_busq(x, y, w, h, txt, sel, marcado, es_cat, idx_n, c_pan, c_txt, c_acc, c_atxt)
+  if ui_estilo == 2 then
+    rectfill(x, y, x + w, y + h, sel and c_acc or c_pan)
+    rect(x, y, x + w, y + h, sel and 7 or c_acc)
+  elseif ui_estilo == 3 then
+    rectfill(x + 2, y, x + w - 2, y + h, sel and c_acc or c_pan)
+    rect(x + 1, y, x + w - 1, y + h, sel and 7 or c_acc)
+  elseif ui_estilo == 4 then
+    rectfill(x, y, x + w, y + h, sel and c_acc or 0)
+    rect(x, y, x + w, y + h, c_acc)
+  elseif ui_estilo == 5 or ui_estilo == 6 then
+    rectfill(x, y, x + w, y + h, sel and c_acc or c_pan)
+    rectfill(x, y, x + 2, y + h, sel and 7 or (marcado and 11 or c_acc))
+  elseif ui_estilo == 7 then
+    rectfill(x, y, x + w, y + h, sel and c_pan or 0)
+    rect(x, y, x + w, y + h, sel and 7 or c_acc)
+  else
+    if sel then rectfill(x, y, x + w, y + h, c_acc) end
+  end
+
+  local col_t = sel and ((ui_estilo == 7) and 7 or c_atxt) or c_txt
+  local pref = ""
+  if es_cat then
+    pref = marcado and "[x]" or "[ ]"
+  elseif ui_estilo == 4 then
+    pref = "#" .. idx_n .. " "
+  else
+    pref = sel and "> " or "  "
+  end
+
+  local ty = y + flr((h - 5) / 2) + 1
+  if ui_zoom == 1 then
+    local max_c = es_cat and 9 or 11
+    local nom_m = texto_marquee(txt, max_c, sel)
+    if es_cat then
+      print(pref, x + 4, ty, sel and col_t or (marcado and 11 or 6))
+      print("\^w" .. nom_m, x + 18, ty, col_t)
+    else
+      print("\^w" .. nom_m, x + 5, ty, col_t)
+    end
+  else
+    local nom_m = texto_marquee(txt, 19, sel)
+    if es_cat then
+      print(pref, x + 4, ty, sel and col_t or (marcado and 11 or 6))
+      print(nom_m, x + 18, ty, col_t)
+    else
+      print(pref .. nom_m, x + 4, ty, col_t)
+    end
+  end
+end
+
 function dibujar_buscador_modal(c_bg, c_pan, c_txt, c_acc, c_atxt, es_cat)
   cls(c_bg)
   local off = modal_anim * 6
@@ -1612,36 +1684,61 @@ function dibujar_buscador_modal(c_bg, c_pan, c_txt, c_acc, c_atxt, es_cat)
   rect(3, 3 + off, 124, 124, c_acc)
   if modal_anim > 0 then return end
 
+  local g = es_cat and mis_juegos[juego_activo] or nil
   rectfill(5, 5, 122, 14, c_pan)
-  print((es_cat and tr(5) or tr(3)) .. " (" .. tr(10) .. ")", 8, 7, 7)
+  local tit = (es_cat and tr(5) or tr(3)) .. " (" .. tr(10) .. ")"
+  print(sub(tit, 1, 21), 8, 7, 7)
+  if es_cat and g then
+    print(#g.cats .. "/12", 102, 7, 11)
+  end
 
-  rectfill(6, 17, 121, 28, 0)
-  rect(6, 17, 121, 28, 11)
-  print("> " .. busq_texto .. "_", 9, 20, 11)
-  print(#busq_resultados, 108, 20, 6)
+  local bar_sel = (busq_foco == 2 and busq_cursor == 0)
+  rectfill(6, 17, 121, 28, bar_sel and c_acc or 0)
+  rect(6, 17, 121, 28, (busq_foco == 1 or bar_sel) and 11 or c_acc)
+  local cur_s = (busq_foco == 1) and "_" or ""
+  print("> " .. busq_texto .. cur_s, 9, 20, bar_sel and c_atxt or 11)
+  print(#busq_resultados, 108, 20, bar_sel and c_atxt or 6)
 
-  rectfill(6, 30, 121, 61, c_pan)
-  if #busq_resultados == 0 then
-    print(es_cat and tr(35) or tr(36), 14, 42, 10)
+  local tec_on = (busq_foco == 1)
+  local y_list = 30
+  local h_list = tec_on and 31 or 89
+  rectfill(6, y_list, 121, y_list + h_list, (ui_estilo == 4 or ui_estilo == 7) and 0 or c_pan)
+  if not tec_on then rect(6, y_list, 121, y_list + h_list, c_acc) end
+
+  local tot_r = #busq_resultados
+  local tiene_custom = (not es_cat) and (#limpiar_espacios_der(busq_texto) > 0)
+  local tot_items = tot_r + (tiene_custom and 1 or 0)
+
+  if tot_items == 0 then
+    print(es_cat and tr(35) or tr(36), 14, y_list + 12, 10)
   else
-    local ini = max(1, min(busq_cursor - 1, #busq_resultados - 2))
-    for i = ini, min(#busq_resultados, ini + 2) do
-      local ly = 33 + (i - ini) * 9
+    local row_h = tec_on and 8 or ((ui_zoom == 1) and 13 or 11)
+    local gap = tec_on and 1 or 1
+    local vis = flr((h_list - 2) / (row_h + gap))
+    local cur_pos = max(1, busq_cursor)
+    local ini = max(1, min(cur_pos - flr(vis / 2), tot_items - vis + 1))
+
+    for i = ini, min(tot_items, ini + vis - 1) do
+      local ly = y_list + 2 + (i - ini) * (row_h + gap)
       local sel = (busq_foco == 2 and i == busq_cursor)
-      local id_item = busq_resultados[i]
-      local nom_item = es_cat and cat_tr(id_item) or juegos_db[id_item]
-      if sel then
-        rectfill(8, ly - 1, 119, ly + 6, c_acc)
-        print("> " .. sub(nom_item or "", 1, 22), 10, ly, c_atxt)
+      if i <= tot_r then
+        local id_item = busq_resultados[i]
+        local nom_item = es_cat and cat_tr(id_item) or juegos_db[id_item]
+        local marc = (es_cat and g) and (cat_esta_activa(g, id_item) > 0) or false
+        dibujar_fila_busq(8, ly, 111, row_h, nom_item or "", sel, marc, es_cat, i, c_pan, c_txt, c_acc, c_atxt)
       else
-        print("  " .. sub(nom_item or "", 1, 22), 10, ly, c_txt)
+        local nom_c = "[+] " .. limpiar_espacios_der(busq_texto)
+        dibujar_fila_busq(8, ly, 111, row_h, nom_c, sel, false, false, i, c_pan, c_txt, c_acc, c_atxt)
       end
     end
   end
 
-  dibujar_teclado_moderno(65, c_pan, c_txt, c_acc, c_atxt)
+  if tec_on then
+    dibujar_teclado_moderno(65, c_pan, c_txt, c_acc, c_atxt)
+  else
+    print("a:ok  ^:kb  b:back", 24, 120, 6)
+  end
 end
-
 
 
 function dibujar_num_grande(txt, x, y, col, esc)
@@ -2041,7 +2138,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.03",
+    "version: v0.04",
     "",
     tr(37),
     "martstartiv",
