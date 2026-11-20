@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.04]
+-- proyecto: counter games xtree [v0.05]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.04"
+  app_ver = "v0.05"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -193,7 +193,10 @@ function _init()
 
   nombres_temas = {
     "cyber", "matrix", "blood", "gold", "ocean",
-    "magma", "retro", "arctic", "toxic", "royal"
+    "magma", "retro", "arctic", "toxic", "royal",
+    "sunset", "neon", "forest", "sakura", "storm",
+    "amber", "mint", "void", "copper", "plasma",
+    "cobalt", "jade", "crimson", "ivory"
   }
   paletas_temas = {
     {0, 1, 12, 14, 7, 12},
@@ -205,7 +208,21 @@ function _init()
     {5, 13, 7, 10, 0, 10},
     {1, 6, 7, 12, 0, 7},
     {0, 5, 11, 3, 7, 11},
-    {1, 2, 15, 14, 0, 14}
+    {1, 2, 15, 14, 0, 14},
+    {2, 4, 10, 9, 7, 10},
+    {0, 1, 14, 11, 0, 14},
+    {0, 3, 7, 11, 0, 11},
+    {2, 13, 7, 14, 0, 14},
+    {1, 5, 7, 12, 0, 12},
+    {0, 4, 9, 10, 0, 10},
+    {1, 3, 7, 11, 0, 11},
+    {0, 5, 7, 13, 0, 13},
+    {4, 2, 15, 9, 0, 15},
+    {1, 2, 12, 8, 7, 14},
+    {0, 1, 7, 12, 0, 12},
+    {3, 1, 11, 10, 0, 11},
+    {2, 0, 7, 8, 7, 8},
+    {5, 1, 7, 15, 0, 15}
   }
   -- parte 1b: diccionarios de juegos, categorias y variables
   dict_categorias_str = "victorias|muertes|niveles|misiones|objetos|vueltas|jefes|cafe|libros|cofres|estrellas|monedas|gemas|pociones|armas|armaduras|hechizos|habilidades|logros|trofeos|secretos|llaves|mapas|cristales|almas|runas|corazones|vidas|puntos|combos|partidas|derrotas|empates|records|tiempos|medallas|cartas|mascotas|monturas|construcc.|cultivos|peces|minerales|recetas|pociones+|encuentros|portales|torres|mazmorras|dragones|desafios|rangos|capitulos|finales|horas"
@@ -320,6 +337,14 @@ function _init()
     "harika oyun!", "sehr gut!", "mumtaz!", "bahut badhiya!", "goed bezig!",
     "bra spelat!", "keren!", "tuyet voi!"
   }
+  frases_animo2 = {
+    "sigue asi!", "keep going!", "tak trzymaj!", "tak derzhat!", "continue assim!",
+    "continua cosi!", "continue!", "ganbatte!", "jiayou!", "hwaiting!",
+    "devam et!", "weiter so!", "istamir!", "lage raho!", "ga zo door!",
+    "fortsatt sa!", "lanjutkan!", "co len!"
+  }
+  ranita_oculta = 0
+  inactivo_t = 0
   animo_timer = 0
   boot_ok = false
   cat_anim_y = 0
@@ -378,8 +403,8 @@ function crear_objeto_juego(id_j, nom_custom)
 end
 
 function guardar_datos()
-  local cfg0 = 1000 + idioma + (tema_idx * 32) + (ui_estilo * 512) + (ui_zoom * 4096) + (modo_animo * 8192)
-  local sub0 = emocion_fija + (tema_auto_juego * 16)
+  local cfg0 = 1000 + idioma + (tema_idx * 32) + (ui_estilo * 1024) + (modo_animo * 8192)
+  local sub0 = emocion_fija + (tema_auto_juego * 32) + (ranita_oculta * 64) + (ui_zoom * 128)
   dset(0, cfg0 + (sub0 / 256))
 
   local b_pack = btn_cfg[1] + (btn_cfg[2] * 8) + (btn_cfg[3] * 64) + (btn_cfg[4] * 512) + (btn_cfg[5] * 4096)
@@ -442,17 +467,18 @@ function cargar_datos()
     local base0 = ent0 - 1000
     idioma = base0 % 32
     if idioma < 1 or idioma > 18 then idioma = 1 end
-    tema_idx = flr(base0 / 32) % 16
-    if tema_idx < 1 or tema_idx > 10 then tema_idx = 1 end
-    ui_estilo = flr(base0 / 512) % 8
+    tema_idx = flr(base0 / 32) % 32
+    if tema_idx < 1 or tema_idx > 24 then tema_idx = 1 end
+    ui_estilo = flr(base0 / 1024) % 8
     if ui_estilo < 1 or ui_estilo > 7 then ui_estilo = 1 end
-    ui_zoom = flr(base0 / 4096) % 2
     modo_animo = flr(base0 / 8192) % 2
 
     local dec0 = flr((v0 - ent0) * 256 + 0.5)
-    emocion_fija = dec0 % 16
-    if emocion_fija > 7 then emocion_fija = 0 end
-    tema_auto_juego = flr(dec0 / 16) % 2
+    emocion_fija = dec0 % 32
+    if emocion_fija > 17 then emocion_fija = 0 end
+    tema_auto_juego = flr(dec0 / 32) % 2
+    ranita_oculta = flr(dec0 / 64) % 2
+    ui_zoom = flr(dec0 / 128) % 2
 
     local v1 = dget(1) or 0
     local ent1 = flr(v1)
@@ -542,6 +568,7 @@ function borrar_todo_guardado()
   ui_zoom = 0
   modo_animo = 0
   emocion_fija = 0
+  ranita_oculta = 0
   tema_auto_juego = 1
   btn_cfg = {4, 5, 1, 0, 2}
   sub_btn_abierta = false
@@ -573,6 +600,14 @@ function _update()
     cargar_datos()
   end
 
+  local h = flr(tonum(stat(93)) or 0)
+  local m = flr(tonum(stat(94)) or 0)
+  local s = flr(tonum(stat(95)) or 0)
+  local sh = tostr(h) if #sh < 2 then sh = "0" .. sh end
+  local sm = tostr(m) if #sm < 2 then sm = "0" .. sm end
+  local ss = tostr(s) if #ss < 2 then ss = "0" .. ss end
+  reloj_str = sh .. ":" .. sm .. ":" .. ss
+
   marquee_t = (marquee_t + 1) % 30000
   if aviso_t > 0 then aviso_t = aviso_t - 1 end
   if trans_t > 0 then trans_t = trans_t - 1 end
@@ -587,17 +622,30 @@ function _update()
   end
 
   ranita_anim = (ranita_anim + 1) % 60
-  if emocion_fija >= 1 and emocion_fija <= 7 then
+  local hay_input = btnp(0) or btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5)
+  if hay_input then
+    inactivo_t = 0
+  else
+    inactivo_t = min(inactivo_t + 1, 1000)
+  end
+
+  if emocion_fija >= 1 and emocion_fija <= 17 then
     emocion_actual = emocion_fija
   else
-    crono_emocion = crono_emocion + 1
-    if btnp(0) or btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) then
-      if emocion_actual == 6 then emocion_actual = 4 crono_emocion = 0 end
-    end
-    if crono_emocion >= 750 then
-      crono_emocion = 0
-      local max_e = (#mis_juegos > 0) and 7 or 6
-      emocion_actual = 1 + flr(rnd(max_e))
+    if inactivo_t >= 390 then
+      emocion_actual = 6
+    else
+      if hay_input and emocion_actual == 6 then
+        emocion_actual = 4
+        crono_emocion = 0
+      end
+      crono_emocion = crono_emocion + 1
+      if crono_emocion >= 450 then
+        crono_emocion = 0
+        local nueva_e = 1 + flr(rnd(17))
+        if nueva_e == 6 then nueva_e = 1 + flr(rnd(5)) end
+        emocion_actual = nueva_e
+      end
     end
   end
 
@@ -633,6 +681,19 @@ function _update()
     end
   elseif estado == 1 then
     actualizar_teclado_nombre()
+    if modo_animo == 1 then
+      animo_timer = animo_timer + 1
+      if animo_timer > 320 then
+        animo_timer = 0
+        local f_tbl = (rnd(2) < 1) and frases_animo or frases_animo2
+        mostrar_aviso(f_tbl[idioma] or "nice!", 75)
+        if emocion_fija == 0 and inactivo_t < 390 then
+          local em_pos = {4, 7, 8, 12, 15}
+          emocion_actual = em_pos[1 + flr(rnd(#em_pos))]
+          crono_emocion = 0
+        end
+      end
+    end
   elseif estado == 2 then
     actualizar_menu_principal()
     if modo_animo == 1 then
@@ -1167,7 +1228,7 @@ function actualizar_opciones()
   end
 
   -- 3. Navegacion principal de Opciones (ahora 10 opciones)
-  local max_opt = 10
+  local max_opt = 11
   if btnp(2) then
     opt_cursor = opt_cursor - 1
     if opt_cursor < 1 then opt_cursor = max_opt end
@@ -1199,8 +1260,8 @@ function actualizar_opciones()
     if izq then ui_estilo = (ui_estilo - 2) % 7 + 1 end
     if der or acc then ui_estilo = (ui_estilo % 7) + 1 end
   elseif opt_cursor == 3 then
-    if izq then tema_idx = (tema_idx - 2) % 10 + 1 end
-    if der or acc then tema_idx = (tema_idx % 10) + 1 end
+    if izq then tema_idx = (tema_idx - 2) % 24 + 1 end
+    if der or acc then tema_idx = (tema_idx % 24) + 1 end
   elseif opt_cursor == 4 then
     if izq or der or acc then tema_auto_juego = (tema_auto_juego == 0) and 1 or 0 end
   elseif opt_cursor == 5 then
@@ -1211,20 +1272,22 @@ function actualizar_opciones()
       if modo_animo == 1 then animo_timer = 290 end
     end
   elseif opt_cursor == 7 then
-    if izq then emocion_fija = (emocion_fija - 1) % 8 end
-    if der or acc then emocion_fija = (emocion_fija + 1) % 8 end
+    if izq then emocion_fija = (emocion_fija - 1) % 18 end
+    if der or acc then emocion_fija = (emocion_fija + 1) % 18 end
   elseif opt_cursor == 8 then
+    if izq or der or acc then ranita_oculta = (ranita_oculta == 0) and 1 or 0 end
+  elseif opt_cursor == 9 then
     if acc or der then
       sub_btn_abierta = true
       sub_btn_cursor = 1
       modal_anim = 6
     end
-  elseif opt_cursor == 9 then
+  elseif opt_cursor == 10 then
     if acc or der then
       creditos_y = 128
       cambiar_estado(7)
     end
-  elseif opt_cursor == 10 then
+  elseif opt_cursor == 11 then
     if acc or der then
       confirm_reset_abierta = true
       confirm_reset_cursor = 2
@@ -1367,7 +1430,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.04", 12, 7, 7)
+  print("counter games xtree v0.05", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -2057,6 +2120,7 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
     {tr(15), ui_zoom == 1 and "on" or "off"},
     {tr(16), modo_animo == 1 and "on" or "off"},
     {tr(17), emocion_fija == 0 and "auto" or ("#" .. emocion_fija)},
+    {"pet " .. tr(17), ranita_oculta == 0 and "on" or "off"},
     {tr(18), "[cfg]"},
     {tr(11), "[>]"},
     {lbl_reset[idioma] or "reset all:", "[!]"}
@@ -2067,11 +2131,11 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
     if idx <= #items then
       local ly = 20 + (slot - 1) * 17
       local sel = (opt_cursor == idx)
-      local bg_col = sel and (idx == 10 and 8 or c_acc) or c_pan
+      local bg_col = sel and (idx == 11 and 8 or c_acc) or c_pan
       rectfill(5, ly, 122, ly + 13, bg_col)
-      print((sel and "> " or "  ") .. items[idx][1], 8, ly + 4, sel and 7 or (idx == 10 and 8 or c_txt))
+      print((sel and "> " or "  ") .. items[idx][1], 8, ly + 4, sel and 7 or (idx == 11 and 8 or c_txt))
       local val_s = items[idx][2]
-      print(val_s, 119 - #val_s * 4, ly + 4, sel and 7 or (idx == 10 and 8 or 11))
+      print(val_s, 119 - #val_s * 4, ly + 4, sel and 7 or (idx == 11 and 8 or 11))
     end
   end
 
@@ -2138,7 +2202,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.04",
+    "version: v0.05",
     "",
     tr(37),
     "martstartiv",
@@ -2174,6 +2238,7 @@ function dibujar_acercade()
 end
 
 function dibujar_ranita(x, y)
+  if ranita_oculta == 1 then return end
   local off_y = flr(sin(ranita_anim / 60) * 1.5)
   local ry = y + off_y
   rectfill(x, ry + 2, x + 10, ry + 10, 3)
@@ -2204,10 +2269,54 @@ function dibujar_ranita(x, y)
       rectfill(x, ry + 1, x + 10, ry + 3, 0)
       pset(x + 1, ry + 1, 7) pset(x + 8, ry + 1, 7)
       rectfill(x + 4, ry + 8, x + 6, ry + 8, 8)
-    else
+    elseif emocion_actual == 7 then
       line(x + 3, ry + 1, x + 7, ry + 1, 10)
       pset(x + 3, ry, 10) pset(x + 5, ry - 1, 10) pset(x + 7, ry, 10)
       rectfill(x + 4, ry + 8, x + 6, ry + 8, 8)
+    elseif emocion_actual == 8 then
+      rectfill(x, ry + 1, x + 3, ry + 3, 1)
+      rectfill(x + 7, ry + 1, x + 10, ry + 3, 1)
+      line(x + 4, ry + 1, x + 6, ry + 1, 12)
+      pset(x + 1, ry + 1, 12) pset(x + 8, ry + 1, 12)
+      pset(x + 3, ry + 7, 8) rectfill(x + 4, ry + 8, x + 6, ry + 8, 8)
+    elseif emocion_actual == 9 then
+      line(x + 8, ry + 2, x + 10, ry + 2, 0)
+      pset(x + 3, ry + 7, 8) rectfill(x + 4, ry + 8, x + 6, ry + 8, 8)
+    elseif emocion_actual == 10 then
+      line(x + 1, ry - 1, x + 9, ry - 1, 12)
+      rectfill(x - 1, ry + 2, x, ry + 5, 12)
+      rectfill(x + 10, ry + 2, x + 11, ry + 5, 12)
+      rectfill(x + 4, ry + 8, x + 6, ry + 8, 8)
+    elseif emocion_actual == 11 then
+      line(x, ry + 3, x + 10, ry + 3, 8)
+      pset(x + 11, ry + 2, 8) pset(x + 11, ry + 4, 8)
+      line(x + 4, ry + 7, x + 6, ry + 7, 0)
+    elseif emocion_actual == 12 then
+      rectfill(x, ry + 1, x + 3, ry + 3, 10)
+      rectfill(x + 7, ry + 1, x + 10, ry + 3, 10)
+      line(x + 4, ry + 2, x + 6, ry + 2, 10)
+      rectfill(x + 4, ry + 8, x + 6, ry + 8, 8)
+    elseif emocion_actual == 13 then
+      line(x + 2, ry + 1, x + 8, ry + 1, 2)
+      rectfill(x + 3, ry - 1, x + 7, ry, 2)
+      rectfill(x + 4, ry - 3, x + 6, ry - 2, 2)
+      pset(x + 5, ry - 1, 10)
+      rectfill(x + 4, ry + 8, x + 6, ry + 8, 8)
+    elseif emocion_actual == 14 then
+      line(x, ry + 1, x + 10, ry + 1, 8)
+      rectfill(x + 7, ry + 1, x + 10, ry + 3, 0)
+      line(x + 4, ry + 7, x + 7, ry + 7, 8)
+    elseif emocion_actual == 15 then
+      rectfill(x, ry + 1, x + 10, ry + 3, 12)
+      line(x + 1, ry + 2, x + 9, ry + 2, 7)
+      rectfill(x + 4, ry + 8, x + 6, ry + 8, 12)
+    elseif emocion_actual == 16 then
+      rectfill(x + 2, ry - 1, x + 8, ry + 1, 7)
+      rectfill(x + 1, ry - 3, x + 9, ry - 1, 7)
+      pset(x + 3, ry + 7, 8) rectfill(x + 4, ry + 8, x + 6, ry + 8, 8) pset(x + 7, ry + 7, 8)
+    else
+      line(x + 3, ry - 2, x + 7, ry - 2, 10)
+      pset(x + 3, ry + 7, 8) rectfill(x + 4, ry + 8, x + 6, ry + 8, 8) pset(x + 7, ry + 7, 8)
     end
   end
 end
