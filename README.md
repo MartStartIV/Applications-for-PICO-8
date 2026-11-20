@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.04</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.05</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,7 +188,14 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.21 (Counter Games Xtree V0.04) - current version</h4>
+    <h4>Version 0.22 (Counter Games Xtree V0.05) - current version</h4>
+    <ul>
+      <li>14 additional color themes have been added.</li>
+      <li>More emotional states for the little frog have been added approximately 10 additional emotions.</li>
+      <li>You can now disable the little frog if you prefer a clean interface without a pet.</li>
+      <li>The little frog will now enter sleep mode after a certain period of inactivity (without affecting the meaning behind its various emotional states).</li>
+    </ul>
+    <h4>Version 0.21 (Counter Games Xtree V0.04)</h4>
     <ul>
       <li>The search system has been improved, both for adding games and for achievement categories.</li>
       <li>The search tool now adapts better to the graphical interface.</li>
