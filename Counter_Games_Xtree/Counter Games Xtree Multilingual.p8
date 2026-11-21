@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.05]
+-- proyecto: counter games xtree [v0.06]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.05"
+  app_ver = "v0.06"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -232,10 +232,16 @@ function _init()
   local dj4 = "pokemon rojo|pokemon azul|pokemon amarillo|pokemon oro|pokemon plata|pokemon cristal|pokemon rubi|pokemon zafiro|pokemon esmeralda|pokemon rojo fuego|pokemon diamante|pokemon perla|pokemon platino|pokemon negro|pokemon blanco|pokemon x|pokemon y|pokemon sol|pokemon luna|pokemon espada|pokemon escarlata|pokemon arceus|final fantasy 6|final fantasy 7|final fantasy 8|final fantasy 9|final fantasy 10|final fantasy 12|final fantasy 16|ff7 rebirth|chrono trigger|chrono cross|persona 3|persona 4|persona 5 royal|shin megami 5|dragon quest 8|dragon quest 11|octopath 1|octopath 2|xenoblade 1|xenoblade 2|xenoblade 3|earthbound|kingdom hearts 1|kingdom hearts 2"
   local dj5 = "resident evil 1|resident evil 2|resident evil 3|resident evil 4|resident evil 7|resident evil 8|silent hill 1|silent hill 2|silent hill 3|dead space 1|dead space 2|alan wake 1|alan wake 2|outlast 1|outlast 2|amnesia bunker|alien isolation|fatal frame 2|doom 1993|doom 2|doom 2016|doom eternal|quake 1|quake 2|half life 1|half life 2|portal 1|portal 2|bioshock 1|bioshock infinite|halo ce|halo 2|halo 3|halo reach|call of duty mw|cod black ops|cod zombies|battlefield 1|counter strike 2|valorant|overwatch 2|apex legends|fortnite|pubg|warframe|destiny 2|borderlands 2|borderlands 3|cyberpunk 2077|gta san andreas|gta vice city|gta 4|gta 5|red dead 1|red dead 2|max payne 1|max payne 2|metal gear solid|mgs 3 snake eater|devil may cry 3|devil may cry 5"
   local dj6 = "street fighter 2|street fighter 6|tekken 3|tekken 7|tekken 8|mortal kombat 2|mortal kombat 11|mortal kombat 1|king of fighters|guilty gear strive|smash bros melee|smash ultimate|dragon ball fz|sparking zero|gran turismo 2|gran turismo 4|gran turismo 7|need for speed mw|forza horizon 5|burnout 3|wipeout pure|f zero gx|rocket league|fifa 23|ea fc 24|pes 6|nba 2k24|tony hawk pro 2|age of empires 2|age of empires 4|starcraft 1|starcraft 2|warcraft 3|civilization 6|heroes might 3|xcom 2|fire emblem 3h|advance wars|into the breach|balatro|slay the spire|vampire survivors|binding of isaac|enter gungeon|risk of rain 2|tetris|pac man|galaga|space invaders|contra|metal slug 1|metal slug 3|metal slug x|streets of rage 2|streets of rage 4|tmnt shredder|sunset riders|cadillacs dino|final fight|bomberman|worms armageddon|rayman 2|ape escape|jak and daxter|ratchet clank|sly cooper|god of war 1|god of war 2|god of war 2018|gow ragnarok|last of us 1|last of us 2|uncharted 2|uncharted 4|ghost of tsushima|horizon zero dawn"
+  local dj7 = "super mario bros 1|super mario bros 2|super mario sunshine|super mario galaxy 1|super mario galaxy 2|super mario 3d world|super mario wonder|new super mario ds|new super mario wii|mario kart 64|mario kart double|mario kart 7|mario party 2|mario party 6|mario tennis|mario strikers|luigis mansion 2|luigis mansion 3|yoshis crafted|yoshis wooly|donkey kong returns|dk tropical freeze|wario land 4|warioware inc|kirby air ride|kirby return dream|kirby planet robobot|kirby star allies|zelda skyward sword|zelda phantom hour|zelda spirit tracks|zelda oracle ages|zelda oracle seasons|zelda four swords|zelda echoes wisdom|metroid zero mission|metroid samus returns|metroid prime 2|metroid prime 3|castlevania rondo|castlevania dawn|castlevania portrait|castlevania order|castlevania circle|castlevania harmony|mega man 3|mega man x2|mega man x3|mega man zero 1|mega man zero 3"
+  local dj8 = "sonic 1|sonic 2|sonic 3 knuckles|sonic cd|sonic adventure 2|sonic heroes|sonic unleashed|sonic generations|sonic colors|shadow generations|crash 2 cortex|crash 3 warped|crash 4 its time|spyro 1|spyro 2 riptos|spyro 3 year|rayman 1|rayman origins|klonoa 2|psychonauts 2|sly 2 band|sly 3 honor|jak 2|jak 3|ratchet going commando|ratchet up arsenal|ratchet rift apart|little big planet 1|little big planet 2|tearaway|astro bot|it takes two|a way out|unravel 1|unravel 2|ori blind|shantae pirate|shantae half genie|guacamelee 1|guacamelee 2|axiom verge 1|axiom verge 2|ender lilies|bloodstained ritual|messenger|sea of stars|chained echoes|crosscode|eastward|dave diver"
+  local dj9 = "pokemon heartgold|pokemon soulsilver|pokemon black 2|pokemon white 2|pokemon omega ruby|pokemon alpha sapphire|pokemon ultra sun|pokemon ultra moon|pokemon lets go|pokemon shield|pokemon violet|pokemon mystery dx|pokemon stadium 1|pokemon stadium 2|pokemon colosseum|pokemon xd gale|final fantasy 1|final fantasy 2|final fantasy 3|final fantasy 4|final fantasy 5|final fantasy 10 2|final fantasy 13|final fantasy 15|ff7 crisis core|ff tactics|dragon quest 1|dragon quest 3|dragon quest 4|dragon quest 5|dragon quest 6|dragon quest 7|dragon quest 9|persona 1|persona 2|persona 3 reload|persona 4 golden|metaphor refantazio|shin megami 3|shin megami 4|tales of symphonia|tales of vesperia|tales of berseria|tales of arise|ni no kuni 1|ni no kuni 2|bravely default|live a live|suikoden 2|legend of dragoon"
+  local dj10 = "xenogears|xenosaga 1|grandia 1|grandia 2|lunar silver star|breath of fire 3|breath of fire 4|golden sun 1|golden sun 2|mother 3|mario luigi superstar|mario luigi bowsers|paper mario thousand|super paper mario|fire emblem blazing|fire emblem sacred|fire emblem awakening|fire emblem fates|fire emblem engage|disgaea 1|disgaea 5|tactics ogre|unicorn overlord|triangle strategy|valkyria chronicles|monster hunter 4u|monster hunter gu|monster hunter world|monster hunter rise|god eater 3|toukiden 2|dragons dogma 2|dark souls remaster|demon souls ps5|armored core 6|nioh complete|wo long fallen|black myth wukong|stellar blade|lies of p overture|remnant 1|remnant 2|grim dawn ashes|last epoch|diablo 2 resurrected|titan quest 2|torchlight infinite|v rising 1|enshrouded 1|palworld sakurajima"
+  local dj11 = "resident evil 0|resident evil cv|resident evil 5|resident evil 6|re2 remake|re3 remake|re4 remake|silent hill 4|silent hill f|silent hill 2 remake|dino crisis 1|dino crisis 2|parasite eve 1|parasite eve 2|fatal frame 1|fatal frame 3|clock tower 3|haunting ground|rule of rose|kuon|siren 1|signalis|tormented souls|crow country|alan wake remaster|control|quantum break|max payne 3|manhunt 1|manhunt 2|bully|la noire|mafia 1|mafia 2|sleeping dogs|yakuza 0|yakuza kiwami 1|yakuza kiwami 2|yakuza like dragon|like dragon infinite|judgment|lost judgment|shenmue 1|shenmue 2|metal gear solid 2|metal gear solid 4|metal gear solid 5|metal gear rising|splinter cell chaos|hitman world"
+  local dj12 = "devil may cry 1|devil may cry 4|bayonetta 1|bayonetta 2|bayonetta 3|ninja gaiden black|ninja gaiden 2|god of war 3|god of war chains|god of war ghost|dantes inferno|onimusha warlords|okami|shadow of colossus|ico|last guardian|prince of persia sands|prince of persia lost|assassins creed 2|assassins creed 4|ac odyssey|ac valhalla|far cry 3|far cry 4|far cry 5|crysis 1|metro 2033|metro exodus|stalker shadow|fallout 3|fallout new vegas|fallout 4|oblivion remaster|dishonored 1|dishonored 2|prey 2017|doom 3|doom 64|wolfenstein new|titanfall 2|apex|left 4 dead 2|payday 2|deep rock galactic|helldivers 2|street fighter 3|street fighter 4|street fighter 5|king of fighters 98|king of fighters 15"
 
   juegos_db = {}
-  local bloques_j = {dj1, dj2, dj3, dj4, dj5, dj6}
-  for b = 1, 6 do
+  local bloques_j = {dj1, dj2, dj3, dj4, dj5, dj6, dj7, dj8, dj9, dj10, dj11, dj12}
+  for b = 1, 12 do
     local tmp = dividir_pipe(bloques_j[b])
     for k = 1, #tmp do add(juegos_db, tmp[k]) end
   end
@@ -389,6 +395,57 @@ function desempaquetar_4ch(val)
   return num_a_ch(c1) .. num_a_ch(c2) .. num_a_ch(c3) .. num_a_ch(c4)
 end
 
+function obtener_cats_juego(id_j, nom)
+  local n = nom or ""
+  local reglas = {
+    {"pokemon", {38, 36, 1, 5, 3, 46, 55}},
+    {"zelda", {27, 49, 22, 10, 7, 15, 21}},
+    {"mario", {11, 12, 28, 3, 7, 21, 35}},
+    {"sonic", {11, 12, 28, 3, 7, 21, 35}},
+    {"kirby", {11, 12, 28, 3, 7, 21, 35}},
+    {"crash", {11, 12, 28, 3, 7, 21, 35}},
+    {"kart", {6, 1, 36, 34, 35, 51, 52}},
+    {"turismo", {6, 1, 36, 34, 35, 51, 52}},
+    {"forza", {6, 1, 36, 34, 35, 51, 52}},
+    {"speed", {6, 1, 36, 34, 35, 51, 52}},
+    {"fighter", {1, 32, 33, 30, 31, 52, 34}},
+    {"tekken", {1, 32, 33, 30, 31, 52, 34}},
+    {"kombat", {1, 32, 33, 30, 31, 52, 34}},
+    {"smash", {1, 32, 33, 30, 31, 52, 34}},
+    {"fifa", {1, 32, 33, 31, 29, 36, 34}},
+    {"nba", {1, 32, 33, 31, 29, 36, 34}},
+    {"balatro", {31, 1, 2, 37, 5, 18, 51}},
+    {"spire", {31, 1, 2, 37, 5, 18, 51}},
+    {"isaac", {31, 1, 2, 5, 18, 21, 51}},
+    {"resident", {2, 22, 5, 15, 23, 35, 54}},
+    {"silent", {2, 22, 5, 15, 23, 35, 54}},
+    {"empires", {1, 32, 4, 40, 52, 53, 55}},
+    {"starcraft", {1, 32, 4, 40, 52, 53, 55}},
+    {"gta", {4, 12, 15, 39, 46, 20, 55}},
+    {"witcher", {4, 12, 15, 39, 46, 20, 55}},
+    {"skyrim", {4, 12, 15, 39, 46, 20, 55}}
+  }
+  for r = 1, #reglas do
+    if contiene_subcadena(n, reglas[r][1]) then
+      local res = {}
+      for k = 1, 7 do add(res, reglas[r][2][k]) end
+      return res
+    end
+  end
+  local base = {1, 2, 3, 4, 5, 6, 7}
+  if id_j and id_j > 0 then
+    if id_j <= 45 then base = {2, 7, 25, 15, 16, 14, 21}
+    elseif id_j <= 85 then base = {40, 41, 43, 42, 44, 10, 55}
+    elseif id_j <= 145 then base = {11, 12, 27, 22, 7, 21, 3}
+    elseif id_j <= 191 then base = {3, 4, 17, 38, 5, 7, 53}
+    elseif id_j <= 252 then base = {4, 2, 15, 22, 35, 34, 54}
+    else base = {1, 32, 30, 6, 36, 34, 52} end
+  end
+  local res = {}
+  for k = 1, 7 do add(res, base[k]) end
+  return res
+end
+
 function crear_objeto_juego(id_j, nom_custom)
   local nom = nom_custom or "juego"
   if id_j and id_j > 0 and juegos_db[id_j] then
@@ -397,10 +454,11 @@ function crear_objeto_juego(id_j, nom_custom)
   return {
     id_juego = id_j or 0,
     nombre = nom,
-    cats = {1, 2, 3, 4, 5, 6, 7},
+    cats = obtener_cats_juego(id_j, nom),
     vals = {0, 0, 0, 0, 0, 0, 0}
   }
 end
+
 
 function guardar_datos()
   local cfg0 = 1000 + idioma + (tema_idx * 32) + (ui_estilo * 1024) + (modo_animo * 8192)
@@ -1300,6 +1358,27 @@ end
 -- parte 5a: motor grafico (_draw), led perimetral y portadas
 -- =========================================================
 
+function genero_de_juego(g)
+  if not g then return 6 end
+  local id = g.id_juego or 0
+  if id > 0 then
+    if id <= 45 or (id >= 502 and id <= 526) then return 1
+    elseif id <= 85 or id == 426 then return 2
+    elseif id <= 145 or (id >= 327 and id <= 425) then return 3
+    elseif id <= 191 or (id >= 427 and id <= 501) then return 4
+    elseif id <= 252 or (id >= 527 and id <= 604) then return 5
+    else return 6 end
+  end
+  local n = g.nombre or ""
+  if contiene_subcadena(n, "souls") or contiene_subcadena(n, "diablo") or contiene_subcadena(n, "witcher") then return 1
+  elseif contiene_subcadena(n, "craft") or contiene_subcadena(n, "stardew") or contiene_subcadena(n, "farm") then return 2
+  elseif contiene_subcadena(n, "mario") or contiene_subcadena(n, "zelda") or contiene_subcadena(n, "sonic") then return 3
+  elseif contiene_subcadena(n, "pokemon") or contiene_subcadena(n, "fantasy") or contiene_subcadena(n, "persona") then return 4
+  elseif contiene_subcadena(n, "resident") or contiene_subcadena(n, "silent") or contiene_subcadena(n, "gta") then return 5
+  end
+  return 6
+end
+
 function obtener_paleta_activa()
   local k1, k2, k3, k4, k5, k6 = 1, 2, 3, 4, 5, 6
   local idx_p = tema_idx
@@ -1312,14 +1391,12 @@ function obtener_paleta_activa()
     g = mis_juegos[juego_sel - 1]
   end
 
-  if g and g.id_juego and g.id_juego > 0 then
-    local id = g.id_juego
-    if id <= 45 then genero = 1 idx_p = 3
-    elseif id <= 85 then genero = 2 idx_p = 2
-    elseif id <= 145 then genero = 3 idx_p = 4
-    elseif id <= 190 then genero = 4 idx_p = 10
-    elseif id <= 250 then genero = 5 idx_p = 8
-    else genero = 6 idx_p = 9 end
+  if g then
+    genero = genero_de_juego(g)
+    local temas_gen = {3, 2, 4, 10, 8, 9}
+    if (g.id_juego and g.id_juego > 0) or genero != 6 then
+      idx_p = temas_gen[genero] or tema_idx
+    end
   end
 
   if tema_auto_juego == 0 then idx_p = tema_idx end
@@ -1430,7 +1507,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.05", 12, 7, 7)
+  print("counter games xtree v0.06", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -1528,9 +1605,10 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
         local cx = 4 + col * 61
         local cy = 44 + fil * 33
         local sel = (juego_sel == i + 1)
+        local gen_i = genero_de_juego(mis_juegos[i])
         rectfill(cx, cy, cx + 58, cy + 30, sel and c_acc or c_pan)
         rect(cx, cy, cx + 58, cy + 30, sel and 7 or c_acc)
-        dibujar_portada_aislada(cx + 3, cy + 3, gen, c_acc, c_txt)
+        dibujar_portada_aislada(cx + 3, cy + 3, gen_i, c_acc, c_txt)
         if ui_zoom == 1 then
           local nom_m = texto_marquee(mis_juegos[i].nombre, 4, sel)
           print("\^w" .. nom_m, cx + 23, cy + 8, sel and c_atxt or c_txt)
@@ -2202,7 +2280,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.05",
+    "version: v0.06",
     "",
     tr(37),
     "martstartiv",
