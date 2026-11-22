@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.06]
+-- proyecto: counter games xtree [v0.07]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.06"
+  app_ver = "v0.07"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -350,6 +350,8 @@ function _init()
     "fortsatt sa!", "lanjutkan!", "co len!"
   }
   ranita_oculta = 0
+  ui_fx = 1
+  menu_anim = 0
   inactivo_t = 0
   animo_timer = 0
   boot_ok = false
@@ -466,7 +468,7 @@ function guardar_datos()
   dset(0, cfg0 + (sub0 / 256))
 
   local b_pack = btn_cfg[1] + (btn_cfg[2] * 8) + (btn_cfg[3] * 64) + (btn_cfg[4] * 512) + (btn_cfg[5] * 4096)
-  dset(1, b_pack + (#mis_juegos / 16))
+  dset(1, b_pack + ((#mis_juegos + (ui_fx * 5)) / 32))
 
   local nu = nombre_usuario or "gamer"
   dset(2, empaquetar_4ch(sub(nu, 1, 4)))
@@ -550,7 +552,9 @@ function cargar_datos()
         if btn_cfg[i] < 0 or btn_cfg[i] > 5 then btn_cfg[i] = 4 end
       end
     end
-    local tot_juegos = min(flr((v1 - ent1) * 16 + 0.5), 4)
+    local dec1 = flr((v1 - ent1) * 32 + 0.5)
+    local tot_juegos = min(dec1 % 5, 4)
+    ui_fx = min(flr(dec1 / 5), 4)
 
     local nu = desempaquetar_4ch(dget(2)) .. desempaquetar_4ch(dget(3)) .. desempaquetar_4ch(dget(4))
     nu = limpiar_espacios_der(nu)
@@ -627,6 +631,7 @@ function borrar_todo_guardado()
   modo_animo = 0
   emocion_fija = 0
   ranita_oculta = 0
+  ui_fx = 1
   tema_auto_juego = 1
   btn_cfg = {4, 5, 1, 0, 2}
   sub_btn_abierta = false
@@ -673,6 +678,7 @@ function _update()
   if bloqueo_input > 0 then bloqueo_input = bloqueo_input - 1 end
   if abs(cat_anim_y) > 0.5 then cat_anim_y = cat_anim_y * 0.65 else cat_anim_y = 0 end
   if abs(cat_anim_x) > 0.5 then cat_anim_x = cat_anim_x * 0.65 else cat_anim_x = 0 end
+  if abs(menu_anim) > 0.2 then menu_anim = menu_anim * 0.7 else menu_anim = 0 end
 
   if led_anim > 0 then
     led_anim = led_anim + 2
@@ -806,9 +812,11 @@ function actualizar_menu_principal()
   if btnp(2) then
     juego_sel = juego_sel - 1
     if juego_sel < 0 then juego_sel = max_fila end
+    menu_anim = -10
   elseif btnp(3) then
     juego_sel = juego_sel + 1
     if juego_sel > max_fila then juego_sel = 0 end
+    menu_anim = 10
   end
 
   if juego_sel == 0 and btnp(4) then
@@ -1286,13 +1294,15 @@ function actualizar_opciones()
   end
 
   -- 3. Navegacion principal de Opciones (ahora 10 opciones)
-  local max_opt = 11
+  local max_opt = 12
   if btnp(2) then
     opt_cursor = opt_cursor - 1
     if opt_cursor < 1 then opt_cursor = max_opt end
+    menu_anim = -10
   elseif btnp(3) then
     opt_cursor = opt_cursor + 1
     if opt_cursor > max_opt then opt_cursor = 1 end
+    menu_anim = 10
   end
 
   if opt_cursor <= opt_scroll then
@@ -1318,34 +1328,37 @@ function actualizar_opciones()
     if izq then ui_estilo = (ui_estilo - 2) % 7 + 1 end
     if der or acc then ui_estilo = (ui_estilo % 7) + 1 end
   elseif opt_cursor == 3 then
+    if izq then ui_fx = (ui_fx - 1) % 5 menu_anim = -10 end
+    if der or acc then ui_fx = (ui_fx + 1) % 5 menu_anim = 10 end
+  elseif opt_cursor == 4 then
     if izq then tema_idx = (tema_idx - 2) % 24 + 1 end
     if der or acc then tema_idx = (tema_idx % 24) + 1 end
-  elseif opt_cursor == 4 then
-    if izq or der or acc then tema_auto_juego = (tema_auto_juego == 0) and 1 or 0 end
   elseif opt_cursor == 5 then
-    if izq or der or acc then ui_zoom = (ui_zoom == 0) and 1 or 0 end
+    if izq or der or acc then tema_auto_juego = (tema_auto_juego == 0) and 1 or 0 end
   elseif opt_cursor == 6 then
+    if izq or der or acc then ui_zoom = (ui_zoom == 0) and 1 or 0 end
+  elseif opt_cursor == 7 then
     if izq or der or acc then
       modo_animo = (modo_animo == 0) and 1 or 0
       if modo_animo == 1 then animo_timer = 290 end
     end
-  elseif opt_cursor == 7 then
+  elseif opt_cursor == 8 then
     if izq then emocion_fija = (emocion_fija - 1) % 18 end
     if der or acc then emocion_fija = (emocion_fija + 1) % 18 end
-  elseif opt_cursor == 8 then
-    if izq or der or acc then ranita_oculta = (ranita_oculta == 0) and 1 or 0 end
   elseif opt_cursor == 9 then
+    if izq or der or acc then ranita_oculta = (ranita_oculta == 0) and 1 or 0 end
+  elseif opt_cursor == 10 then
     if acc or der then
       sub_btn_abierta = true
       sub_btn_cursor = 1
       modal_anim = 6
     end
-  elseif opt_cursor == 10 then
+  elseif opt_cursor == 11 then
     if acc or der then
       creditos_y = 128
       cambiar_estado(7)
     end
-  elseif opt_cursor == 11 then
+  elseif opt_cursor == 12 then
     if acc or der then
       confirm_reset_abierta = true
       confirm_reset_cursor = 2
@@ -1507,7 +1520,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.06", 12, 7, 7)
+  print("counter games xtree v0.07", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -1558,22 +1571,38 @@ function texto_marquee(txt, max_ch, sel)
   return sub(txt, 1 + off, max_ch + off)
 end
 
+function calc_fx(sel, idx)
+  if ui_fx == 0 then return 0, 0, 0 end
+  if ui_fx == 1 then
+    return sel and flr(abs(menu_anim) * 0.8) or 0, 0, 0
+  elseif ui_fx == 2 then
+    return sel and flr(sin(menu_anim / 10) * 5) or 0, 0, 0
+  elseif ui_fx == 3 then
+    return 0, 0, sel and flr(sin(ranita_anim / 30) * 1.2) or 0
+  else
+    local wv = flr(sin((marquee_t + idx * 8) / 24) * 2)
+    return sel and (wv + flr(menu_anim * 0.4)) or 0, 0, 0
+  end
+end
+
 
 function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, gen)
   cls(c_bg)
   dibujar_cabecera_hud(c_pan, c_txt, c_acc, idx_t_act)
 
+  local dx0, _, p0 = calc_fx(juego_sel == 0, 0)
   if juego_sel == 0 then
-    rectfill(4, 18, 86, 27, c_acc)
-    print("> [" .. tr(6) .. "]", 7, 20, c_atxt)
+    rectfill(4 + dx0 - p0, 18, 86 + dx0 + p0, 27, c_acc)
+    print("> [" .. tr(6) .. "]", 7 + dx0, 20, c_atxt)
   else
     rect(4, 18, 86, 27, c_pan)
     print("  [" .. tr(6) .. "]", 7, 20, c_txt)
   end
 
+  local dx1, _, p1 = calc_fx(juego_sel == 1, 1)
   if juego_sel == 1 then
-    rectfill(4, 30, 123, 40, c_acc)
-    print("> [+] " .. tr(3), 8, 32, c_atxt)
+    rectfill(4 + dx1 - p1, 30, 123 + dx1 + p1, 40, c_acc)
+    print("> [+] " .. tr(3), 8 + dx1, 32, c_atxt)
   else
     rect(4, 30, 123, 40, c_acc)
     print("  [+] " .. tr(3), 8, 32, 11)
@@ -1587,11 +1616,12 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
       for i = 1, #mis_juegos do
         local ly = 44 + (i - 1) * 16
         local sel = (juego_sel == i + 1)
+        local dx, _, pd = calc_fx(sel, i + 1)
         local nom = mis_juegos[i].nombre
         if ui_zoom == 1 then nom = sub(nom, 1, 11) else nom = sub(nom, 1, 17) end
         if sel then
-          rectfill(4, ly, 123, ly + 13, c_acc)
-          print((ui_zoom == 1 and "\^w>" or "> ") .. nom .. " >", 7, ly + 4, c_atxt)
+          rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, c_acc)
+          print((ui_zoom == 1 and "\^w>" or "> ") .. nom .. " >", 7 + dx, ly + 4, c_atxt)
         else
           rectfill(4, ly, 123, ly + 13, c_pan)
           print((ui_zoom == 1 and "\^w " or "  ") .. nom, 7, ly + 4, c_txt)
@@ -1602,12 +1632,13 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
       for i = 1, #mis_juegos do
         local col = (i - 1) % 2
         local fil = flr((i - 1) / 2)
-        local cx = 4 + col * 61
-        local cy = 44 + fil * 33
         local sel = (juego_sel == i + 1)
+        local dx, _, pd = calc_fx(sel, i + 1)
+        local cx = 4 + col * 61 + flr(dx * 0.5)
+        local cy = 44 + fil * 33
         local gen_i = genero_de_juego(mis_juegos[i])
-        rectfill(cx, cy, cx + 58, cy + 30, sel and c_acc or c_pan)
-        rect(cx, cy, cx + 58, cy + 30, sel and 7 or c_acc)
+        rectfill(cx - pd, cy, cx + 58 + pd, cy + 30, sel and c_acc or c_pan)
+        rect(cx - pd, cy, cx + 58 + pd, cy + 30, sel and 7 or c_acc)
         dibujar_portada_aislada(cx + 3, cy + 3, gen_i, c_acc, c_txt)
         if ui_zoom == 1 then
           local nom_m = texto_marquee(mis_juegos[i].nombre, 4, sel)
@@ -1622,12 +1653,13 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
         end
       end
 
-     elseif ui_estilo == 3 then
+    elseif ui_estilo == 3 then
       for i = 1, #mis_juegos do
-        local mx = 20 + (i - 1) * 29
-        local my = 62
         local sel = (juego_sel == i + 1)
-        local rad = (ui_zoom == 1) and (sel and 14 or 12) or (sel and 13 or 11)
+        local dx, _, pd = calc_fx(sel, i + 1)
+        local mx = 20 + (i - 1) * 29
+        local my = 62 - flr(abs(dx) * 0.4)
+        local rad = ((ui_zoom == 1) and (sel and 14 or 12) or (sel and 13 or 11)) + pd
         circfill(mx, my, rad, sel and c_acc or c_pan)
         circ(mx, my, rad, sel and 7 or c_acc)
         if ui_zoom == 1 then
@@ -1638,15 +1670,16 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
       end
       local idx_g = max(1, juego_sel - 1)
       if mis_juegos[idx_g] then
-        rectfill(6, 82, 121, 108, c_pan)
-        rect(6, 82, 121, 108, c_acc)
-        dibujar_portada_aislada(9, 86, gen, c_acc, c_txt)
+        local dx, _, _ = calc_fx(juego_sel >= 2, idx_g)
+        rectfill(6 + dx, 82, 121 + dx, 108, c_pan)
+        rect(6 + dx, 82, 121 + dx, 108, c_acc)
+        dibujar_portada_aislada(9 + dx, 86, gen, c_acc, c_txt)
         if ui_zoom == 1 then
-          print("\^w" .. sub(mis_juegos[idx_g].nombre, 1, 10), 30, 88, 7)
-          print(sub(tr(20), 1, 21), 30, 99, 11)
+          print("\^w" .. sub(mis_juegos[idx_g].nombre, 1, 10), 30 + dx, 88, 7)
+          print(sub(tr(20), 1, 21), 30 + dx, 99, 11)
         else
-          print(sub(mis_juegos[idx_g].nombre, 1, 18), 30, 88, 7)
-          print(sub(tr(20), 1, 21), 30, 99, 11)
+          print(sub(mis_juegos[idx_g].nombre, 1, 18), 30 + dx, 88, 7)
+          print(sub(tr(20), 1, 21), 30 + dx, 99, 11)
         end
       end
 
@@ -1654,47 +1687,49 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
       local idx_g = max(1, juego_sel - 1)
       local g_act = mis_juegos[idx_g]
       local sel = (juego_sel >= 2)
+      local dx, _, pd = calc_fx(sel, idx_g)
       if g_act then
-        rectfill(6, 44, 121, 108, sel and c_acc or c_pan)
-        rect(6, 44, 121, 108, sel and 7 or c_acc)
-        rectfill(10, 48, 46, 84, 0)
-        rect(10, 48, 46, 84, sel and 7 or c_acc)
-        dibujar_portada_aislada(19, 57, gen, c_acc, c_txt)
+        rectfill(6 + dx - pd, 44, 121 + dx + pd, 108, sel and c_acc or c_pan)
+        rect(6 + dx - pd, 44, 121 + dx + pd, 108, sel and 7 or c_acc)
+        rectfill(10 + dx, 48, 46 + dx, 84, 0)
+        rect(10 + dx, 48, 46 + dx, 84, sel and 7 or c_acc)
+        dibujar_portada_aislada(19 + dx, 57, gen, c_acc, c_txt)
         local cat_txt = #g_act.cats .. " " .. sub(tr(5), 1, 11)
         if ui_zoom == 1 then
           local nom_m = texto_marquee(g_act.nombre, 8, sel)
-          print("\^w" .. nom_m, 51, 52, sel and c_atxt or 7)
-          print(cat_txt, 51, 66, sel and c_atxt or 10)
+          print("\^w" .. nom_m, 51 + dx, 52, sel and c_atxt or 7)
+          print(cat_txt, 51 + dx, 66, sel and c_atxt or 10)
         else
           local nom_m = texto_marquee(g_act.nombre, 16, sel)
-          print(nom_m, 51, 52, sel and c_atxt or 7)
-          print(cat_txt, 51, 64, sel and c_atxt or 10)
-          print(sub(tr(20), 1, 16), 51, 75, sel and c_atxt or 11)
+          print(nom_m, 51 + dx, 52, sel and c_atxt or 7)
+          print(cat_txt, 51 + dx, 64, sel and c_atxt or 10)
+          print(sub(tr(20), 1, 16), 51 + dx, 75, sel and c_atxt or 11)
         end
-        line(10, 89, 117, 89, sel and c_atxt or c_acc)
+        line(10 + dx, 89, 117 + dx, 89, sel and c_atxt or c_acc)
         for d = 1, #mis_juegos do
-          local dx = 48 + (d - 1) * 9
-          circfill(dx, 98, (d == idx_g) and 3 or 1, (d == idx_g) and 7 or 5)
+          local px = 48 + (d - 1) * 9 + dx
+          circfill(px, 98, (d == idx_g) and 3 or 1, (d == idx_g) and 7 or 5)
         end
-        print(idx_g .. "/" .. #mis_juegos, 96, 95, sel and c_atxt or 6)
+        print(idx_g .. "/" .. #mis_juegos, 96 + dx, 95, sel and c_atxt or 6)
       end
 
     elseif ui_estilo == 6 then
       for i = 1, #mis_juegos do
         local ly = 44 + (i - 1) * 16
         local sel = (juego_sel == i + 1)
+        local dx, _, pd = calc_fx(sel, i + 1)
         local nc = #mis_juegos[i].cats
-        rectfill(4, ly, 123, ly + 13, sel and c_acc or c_pan)
-        rectfill(4, ly, 7, ly + 13, sel and 7 or 11)
+        rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and c_acc or c_pan)
+        rectfill(4 + dx - pd, ly, 7 + dx - pd, ly + 13, sel and 7 or 11)
         local bar_w = min(24, nc * 2)
-        rectfill(96, ly + 4, 96 + bar_w, ly + 9, sel and c_atxt or 11)
-        rect(96, ly + 4, 120, ly + 9, sel and c_atxt or c_acc)
+        rectfill(96 + dx, ly + 4, 96 + bar_w + dx, ly + 9, sel and c_atxt or 11)
+        rect(96 + dx, ly + 4, 120 + dx, ly + 9, sel and c_atxt or c_acc)
         if ui_zoom == 1 then
           local nom_m = texto_marquee(mis_juegos[i].nombre, 10, sel)
-          print("\^w" .. nom_m, 11, ly + 4, sel and c_atxt or c_txt)
+          print("\^w" .. nom_m, 11 + dx, ly + 4, sel and c_atxt or c_txt)
         else
           local nom_m = texto_marquee(mis_juegos[i].nombre, 19, sel)
-          print(nom_m, 11, ly + 4, sel and c_atxt or c_txt)
+          print(nom_m, 11 + dx, ly + 4, sel and c_atxt or c_txt)
         end
       end
 
@@ -1702,19 +1737,20 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
       for i = 1, #mis_juegos do
         local ly = 44 + (i - 1) * 16
         local sel = (juego_sel == i + 1)
+        local dx, _, pd = calc_fx(sel, i + 1)
         local tot_pts = 0
         for v = 1, #mis_juegos[i].vals do tot_pts = tot_pts + mis_juegos[i].vals[v] end
-        rectfill(4, ly, 123, ly + 13, sel and c_pan or 0)
-        rect(4, ly, 123, ly + 13, sel and 7 or c_acc)
-        rect(6, ly + 2, 121, ly + 11, sel and c_acc or c_pan)
+        rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and c_pan or 0)
+        rect(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and 7 or c_acc)
+        rect(6 + dx, ly + 2, 121 + dx, ly + 11, sel and c_acc or c_pan)
         if ui_zoom == 1 then
           local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
-          print("\^w" .. nom_m, 9, ly + 4, sel and 7 or c_txt)
-          print("\^w" .. tot_pts, 118 - (#tostr(tot_pts) * 8), ly + 4, 10)
+          print("\^w" .. nom_m, 9 + dx, ly + 4, sel and 7 or c_txt)
+          print("\^w" .. tot_pts, 118 + dx - (#tostr(tot_pts) * 8), ly + 4, 10)
         else
           local nom_m = texto_marquee(mis_juegos[i].nombre, 11, sel)
-          print("p" .. i .. ":" .. nom_m, 9, ly + 4, sel and 7 or c_txt)
-          print(tostr(tot_pts), 118 - (#tostr(tot_pts) * 4), ly + 4, 10)
+          print("p" .. i .. ":" .. nom_m, 9 + dx, ly + 4, sel and 7 or c_txt)
+          print(tostr(tot_pts), 118 + dx - (#tostr(tot_pts) * 4), ly + 4, 10)
         end
       end
 
@@ -1722,18 +1758,19 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
       for i = 1, #mis_juegos do
         local ly = 44 + (i - 1) * 16
         local sel = (juego_sel == i + 1)
+        local dx, _, pd = calc_fx(sel, i + 1)
         local tot_pts = 0
         for v = 1, #mis_juegos[i].vals do tot_pts = tot_pts + mis_juegos[i].vals[v] end
-        rectfill(4, ly, 123, ly + 13, sel and c_acc or 0)
-        rect(4, ly, 123, ly + 13, c_acc)
+        rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and c_acc or 0)
+        rect(4 + dx - pd, ly, 123 + dx + pd, ly + 13, c_acc)
         if ui_zoom == 1 then
           local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
-          print("\^w" .. nom_m, 7, ly + 4, sel and c_atxt or c_txt)
-          print("\^w" .. tot_pts, 120 - (#tostr(tot_pts) * 8), ly + 4, sel and c_atxt or 10)
+          print("\^w" .. nom_m, 7 + dx, ly + 4, sel and c_atxt or c_txt)
+          print("\^w" .. tot_pts, 120 + dx - (#tostr(tot_pts) * 8), ly + 4, sel and c_atxt or 10)
         else
           local nom_m = texto_marquee(mis_juegos[i].nombre, 12, sel)
-          print("#" .. i .. " " .. nom_m, 7, ly + 4, sel and c_atxt or c_txt)
-          print("[" .. tot_pts .. "]", 92, ly + 4, sel and c_atxt or 10)
+          print("#" .. i .. " " .. nom_m, 7 + dx, ly + 4, sel and c_atxt or c_txt)
+          print("[" .. tot_pts .. "]", 92 + dx, ly + 4, sel and c_atxt or 10)
         end
       end
     end
@@ -1744,6 +1781,7 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
   print(tr(20), 3, 118, 6)
   dibujar_ranita(112, 114)
 end
+
 
 -- =========================================================
 -- parte 6a: teclado moderno, buscador y pantalla de categorias
@@ -2190,9 +2228,11 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
   }
 
   local estilos_nom = {"#1", "#2", "#3", "#4", "#5", "#6", "#7"}
+  local fx_nom = {"off", "slide", "spring", "pulse", "wave"}
   local items = {
     {tr(1), "<" .. cod_lang[idioma] .. ">"},
     {tr(12), estilos_nom[ui_estilo]},
+    {"fx ui:", fx_nom[ui_fx + 1]},
     {tr(13), nombres_temas[tema_idx]},
     {tr(14), tema_auto_juego == 1 and "on" or "off"},
     {tr(15), ui_zoom == 1 and "on" or "off"},
@@ -2209,11 +2249,12 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
     if idx <= #items then
       local ly = 20 + (slot - 1) * 17
       local sel = (opt_cursor == idx)
-      local bg_col = sel and (idx == 11 and 8 or c_acc) or c_pan
-      rectfill(5, ly, 122, ly + 13, bg_col)
-      print((sel and "> " or "  ") .. items[idx][1], 8, ly + 4, sel and 7 or (idx == 11 and 8 or c_txt))
+      local dx, _, pd = calc_fx(sel, idx)
+      local bg_col = sel and (idx == 12 and 8 or c_acc) or c_pan
+      rectfill(5 + dx - pd, ly, 122 + dx + pd, ly + 13, bg_col)
+      print((sel and "> " or "  ") .. items[idx][1], 8 + dx, ly + 4, sel and 7 or (idx == 12 and 8 or c_txt))
       local val_s = items[idx][2]
-      print(val_s, 119 - #val_s * 4, ly + 4, sel and 7 or (idx == 11 and 8 or 11))
+      print(val_s, 119 + dx - #val_s * 4, ly + 4, sel and 7 or (idx == 12 and 8 or 11))
     end
   end
 
@@ -2280,7 +2321,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.06",
+    "version: v0.07",
     "",
     tr(37),
     "martstartiv",
