@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.06</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.07</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,7 +188,12 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.23 (Counter Games Xtree V0.06) - current version</h4>
+    <h4>Version 0.24 (Counter Games Xtree V0.07) - current version</h4>
+    <ul>
+      <li>Some errors have been fixed.</li>
+      <li>Movement effects have been added to the main menu and options menu interfaces, with options that can be selected via the settings.</li>
+    </ul>
+    <h4>Version 0.23 (Counter Games Xtree V0.06)</h4>
     <ul>
       <li>The system for loading game categories has been improved; previously, almost all games had their achievement categories set to a default value.</li>
       <li>The game database has been expanded by an additional 300 titles, offering greater variety :)</li>
