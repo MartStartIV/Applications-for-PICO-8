@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.07]
+-- proyecto: counter games xtree [v0.08]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.07"
+  app_ver = "v0.08"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -350,6 +350,15 @@ function _init()
     "fortsatt sa!", "lanjutkan!", "co len!"
   }
   ranita_oculta = 0
+  pet_tipo = 0
+  monedas = 20
+  uso_frames = 0
+  juegos_exp = {false, false, false, false}
+  ultimo_cat_inc = {0, 0, 0, 0}
+  ultimo_hora_inc = {"", "", "", ""}
+  confirm_exp_abierta = false
+  confirm_exp_cursor = 2
+  pendiente_cid = 0
   ui_fx = 1
   menu_anim = 0
   inactivo_t = 0
@@ -478,7 +487,7 @@ function guardar_datos()
   for j = 1, 4 do
     local g = mis_juegos[j]
     if g then
-      local n_cats = min(#g.cats, 12)
+      local n_cats = min(#g.cats, 20)
       if g.id_juego and g.id_juego > 0 then
         dset(4 + j, g.id_juego + (n_cats / 32))
       else
@@ -493,15 +502,15 @@ function guardar_datos()
   for j = 1, 4 do
     local g = mis_juegos[j]
     if g then
-      local n_cats = min(#g.cats, 12)
-      if (not g.id_juego or g.id_juego == 0) and slot <= 62 then
+      local n_cats = min(#g.cats, 20)
+      if (not g.id_juego or g.id_juego == 0) and slot <= 59 then
         dset(slot, n_cats)
         slot = slot + 1
         dset(slot, empaquetar_4ch(sub(g.nombre, 5, 8)))
         slot = slot + 1
       end
       for c = 1, n_cats do
-        if slot <= 63 then
+        if slot <= 60 then
           local cid = min(max(g.cats[c] or 1, 1), 60)
           local cval = min(max(flr(g.vals[c] or 0), 0), 32760)
           dset(slot, cval + (cid / 64))
@@ -510,10 +519,25 @@ function guardar_datos()
       end
     end
   end
-  while slot <= 63 do
+  while slot <= 60 do
     dset(slot, 0)
     slot = slot + 1
   end
+
+  local mask_exp = 0
+  local mult = 1
+  for j = 1, 4 do
+    if juegos_exp[j] then mask_exp = mask_exp + mult end
+    mult = mult * 2
+  end
+  local dec61 = mask_exp + (pet_tipo * 16)
+  dset(61, 1000 + min(max(flr(monedas), 0), 999) + (dec61 / 64))
+  dset(62, flr(uso_frames))
+  local u1 = (ultimo_cat_inc[1] or 0) % 32
+  local u2 = (ultimo_cat_inc[2] or 0) % 32
+  local u3 = (ultimo_cat_inc[3] or 0) % 32
+  local u4 = (ultimo_cat_inc[4] or 0) % 32
+  dset(63, u1 + (u2 * 32) + (u3 * 1024) + (u4 / 32))
 end
 -- =========================================================
 -- parte 2b: lectura de datos guardados (64 slots)
@@ -543,13 +567,12 @@ function cargar_datos()
     local v1 = dget(1) or 0
     local ent1 = flr(v1)
     if ent1 > 0 then
-      btn_cfg[1] = ent1 % 8
-      btn_cfg[2] = flr(ent1 / 8) % 8
-      btn_cfg[3] = flr(ent1 / 64) % 8
-      btn_cfg[4] = flr(ent1 / 512) % 8
-      btn_cfg[5] = flr(ent1 / 4096) % 8
+      local tmp1 = ent1
       for i = 1, 5 do
-        if btn_cfg[i] < 0 or btn_cfg[i] > 5 then btn_cfg[i] = 4 end
+        local bv = tmp1 % 8
+        if bv < 0 or bv > 5 then bv = 4 end
+        btn_cfg[i] = bv
+        tmp1 = flr(tmp1 / 8)
       end
     end
     local dec1 = flr((v1 - ent1) * 32 + 0.5)
@@ -566,13 +589,13 @@ function cargar_datos()
       local vj = dget(4 + j) or 0
       if vj > 0 then
         local id_j = flr(vj)
-        local n_cats = min(flr((vj - id_j) * 32 + 0.5), 12)
+        local n_cats = min(flr((vj - id_j) * 32 + 0.5), 20)
         if n_cats < 1 then n_cats = 7 end
         local g = crear_objeto_juego(id_j, nil)
         g.cats = {}
         g.vals = {}
         for c = 1, n_cats do
-          if slot <= 63 then
+          if slot <= 60 then
             local sc = dget(slot) or 0
             slot = slot + 1
             local cval = flr(sc)
@@ -587,8 +610,8 @@ function cargar_datos()
         local p1 = limpiar_espacios_der(desempaquetar_4ch(-vj))
         local n_cats = 7
         local p2 = ""
-        if slot <= 62 then
-          n_cats = min(max(flr(dget(slot) or 7), 1), 12)
+        if slot <= 59 then
+          n_cats = min(max(flr(dget(slot) or 7), 1), 20)
           slot = slot + 1
           p2 = limpiar_espacios_der(desempaquetar_4ch(dget(slot) or 0))
           slot = slot + 1
@@ -597,7 +620,7 @@ function cargar_datos()
         g.cats = {}
         g.vals = {}
         for c = 1, n_cats do
-          if slot <= 63 then
+          if slot <= 60 then
             local sc = dget(slot) or 0
             slot = slot + 1
             local cval = flr(sc)
@@ -610,11 +633,46 @@ function cargar_datos()
         add(mis_juegos, g)
       end
     end
+
+    local v61 = dget(61) or 0
+    local ent61 = flr(v61)
+    if ent61 >= 1000 then
+      monedas = min(max(ent61 - 1000, 0), 999)
+      local dec61 = flr((v61 - ent61) * 64 + 0.5)
+      local mask_exp = dec61 % 16
+      juegos_exp = {
+        (mask_exp % 2) == 1,
+        (flr(mask_exp / 2) % 2) == 1,
+        (flr(mask_exp / 4) % 2) == 1,
+        (flr(mask_exp / 8) % 2) == 1
+      }
+      pet_tipo = flr(dec61 / 16) % 4
+    else
+      monedas = 20
+      pet_tipo = 0
+      juegos_exp = {false, false, false, false}
+    end
+
+    uso_frames = max(0, flr(dget(62) or 0))
+    local v63 = dget(63) or 0
+    local ent63 = flr(v63)
+    ultimo_cat_inc = {
+      ent63 % 32,
+      flr(ent63 / 32) % 32,
+      flr(ent63 / 1024) % 32,
+      flr((v63 - ent63) * 32 + 0.5) % 32
+    }
     estado = 2
   else
+    monedas = 20
+    pet_tipo = 0
+    uso_frames = 0
+    juegos_exp = {false, false, false, false}
+    ultimo_cat_inc = {0, 0, 0, 0}
     estado = 0
   end
 end
+
 
 function borrar_todo_guardado()
   for i = 0, 63 do
@@ -631,6 +689,12 @@ function borrar_todo_guardado()
   modo_animo = 0
   emocion_fija = 0
   ranita_oculta = 0
+  pet_tipo = 0
+  monedas = 20
+  uso_frames = 0
+  juegos_exp = {false, false, false, false}
+  ultimo_cat_inc = {0, 0, 0, 0}
+  ultimo_hora_inc = {"", "", "", ""}
   ui_fx = 1
   tema_auto_juego = 1
   btn_cfg = {4, 5, 1, 0, 2}
@@ -720,6 +784,20 @@ function _update()
   local sm = tostr(m) if #sm < 2 then sm = "0" .. sm end
   local ss = tostr(s) if #ss < 2 then ss = "0" .. ss end
   reloj_str = sh .. ":" .. sm .. ":" .. ss
+
+  if boot_ok and ranita_oculta == 0 then
+    uso_frames = uso_frames + 1
+    if uso_frames % 1800 == 0 then
+      dset(62, uso_frames)
+    end
+    if uso_frames >= 9000 then
+      uso_frames = 0
+      local premio = (pet_tipo == 0) and (2 + flr(rnd(3))) or (1 + flr(rnd(2)))
+      monedas = min(monedas + premio, 999)
+      guardar_datos()
+      mostrar_aviso("+" .. premio .. " coins!", 65)
+    end
+  end
 
   if btn(5) and btnp(0) and estado >= 2 and estado != 7 then
     creditos_y = 128
@@ -1051,6 +1129,33 @@ function actualizar_buscador_categorias()
   local g = mis_juegos[juego_activo]
   if not g then cambiar_estado(2) return end
 
+  if confirm_exp_abierta then
+    if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
+      confirm_exp_cursor = (confirm_exp_cursor == 1) and 2 or 1
+    elseif btnp(4) then
+      if confirm_exp_cursor == 1 then
+        if monedas >= 12 then
+          monedas = monedas - 12
+          juegos_exp[juego_activo] = true
+          if pendiente_cid > 0 then
+            add(g.cats, pendiente_cid)
+            add(g.vals, 0)
+          end
+          guardar_datos()
+          mostrar_aviso("slots: 20! (-12c)", 50)
+        else
+          mostrar_aviso("need 12 coins!", 45)
+        end
+      end
+      confirm_exp_abierta = false
+      pendiente_cid = 0
+    elseif btnp(5) then
+      confirm_exp_abierta = false
+      pendiente_cid = 0
+    end
+    return
+  end
+
   if btnp(5) then
     if busq_foco == 2 then
       busq_foco = 1
@@ -1114,8 +1219,15 @@ function actualizar_buscador_categorias()
               mostrar_aviso("- " .. cat_tr(cid), 30)
             end
           else
-            if #g.cats >= 12 then
-              mostrar_aviso("max 12 cats!", 35)
+            local lim_c = juegos_exp[juego_activo] and 20 or 12
+            if #g.cats >= lim_c then
+              if not juegos_exp[juego_activo] then
+                pendiente_cid = cid
+                confirm_exp_abierta = true
+                confirm_exp_cursor = 1
+              else
+                mostrar_aviso("max 20 cats!", 35)
+              end
             else
               add(g.cats, cid)
               add(g.vals, 0)
@@ -1223,6 +1335,8 @@ function actualizar_categorias_juego()
 
     if btnp(b_sumar) then
       g.vals[cat_cursor] = min((g.vals[cat_cursor] or 0) + 1, 32760)
+      ultimo_cat_inc[juego_activo] = cat_cursor
+      ultimo_hora_inc[juego_activo] = sub(reloj_str, 1, 5)
       guardar_datos()
       led_anim = 1
       if emocion_fija == 0 then emocion_actual = 4 crono_emocion = 0 end
@@ -1294,7 +1408,7 @@ function actualizar_opciones()
   end
 
   -- 3. Navegacion principal de Opciones (ahora 10 opciones)
-  local max_opt = 12
+  local max_opt = 13
   if btnp(2) then
     opt_cursor = opt_cursor - 1
     if opt_cursor < 1 then opt_cursor = max_opt end
@@ -1348,17 +1462,20 @@ function actualizar_opciones()
   elseif opt_cursor == 9 then
     if izq or der or acc then ranita_oculta = (ranita_oculta == 0) and 1 or 0 end
   elseif opt_cursor == 10 then
+    if izq then pet_tipo = (pet_tipo - 1) % 4 end
+    if der or acc then pet_tipo = (pet_tipo + 1) % 4 end
+  elseif opt_cursor == 11 then
     if acc or der then
       sub_btn_abierta = true
       sub_btn_cursor = 1
       modal_anim = 6
     end
-  elseif opt_cursor == 11 then
+  elseif opt_cursor == 12 then
     if acc or der then
       creditos_y = 128
       cambiar_estado(7)
     end
-  elseif opt_cursor == 12 then
+  elseif opt_cursor == 13 then
     if acc or der then
       confirm_reset_abierta = true
       confirm_reset_cursor = 2
@@ -1470,7 +1587,8 @@ function dibujar_cabecera_hud(c_pan, c_txt, c_acc, idx_tema_act)
   print(reloj_str, 93, 2, 7)
   local tag_id = "[" .. (cod_lang[idioma] or "es") .. "]"
   print(tag_id, 3, 9, c_acc)
-  print("@" .. sub(nombre_usuario, 1, 8), 22, 9, 11)
+  print("@" .. sub(nombre_usuario, 1, 7), 22, 9, 11)
+  print("$" .. monedas, 62, 9, 10)
   local t_abrev = "t:" .. sub(nombres_temas[idx_tema_act] or "cyb", 1, 4)
   print(t_abrev, 96, 9, 6)
 end
@@ -1520,7 +1638,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.07", 12, 7, 7)
+  print("counter games xtree v0.08", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -1868,7 +1986,8 @@ function dibujar_buscador_modal(c_bg, c_pan, c_txt, c_acc, c_atxt, es_cat)
   local tit = (es_cat and tr(5) or tr(3)) .. " (" .. tr(10) .. ")"
   print(sub(tit, 1, 21), 8, 7, 7)
   if es_cat and g then
-    print(#g.cats .. "/12", 102, 7, 11)
+    local lim_c = juegos_exp[juego_activo] and 20 or 12
+    print(#g.cats .. "/" .. lim_c .. " $" .. monedas, 82, 7, 10)
   end
 
   local bar_sel = (busq_foco == 2 and busq_cursor == 0)
@@ -1917,6 +2036,20 @@ function dibujar_buscador_modal(c_bg, c_pan, c_txt, c_acc, c_atxt, es_cat)
   else
     print("a:ok  ^:kb  b:back", 24, 120, 6)
   end
+  if es_cat and confirm_exp_abierta then
+    rectfill(10, 34, 117, 94, 0)
+    rect(10, 34, 117, 94, 10)
+    rectfill(12, 36, 115, 45, 10)
+    print("+20 SLOTS (" .. monedas .. "$)", 26, 38, 0)
+    print("expand max 12 -> 20?", 16, 51, 7)
+    print("cost: 12 coins", 28, 61, 10)
+    local s_si = (confirm_exp_cursor == 1)
+    local s_no = (confirm_exp_cursor == 2)
+    rectfill(20, 75, 56, 86, s_si and 11 or 1)
+    print(tr(8), 32, 78, s_si and 0 or 5)
+    rectfill(70, 75, 106, 86, s_no and 8 or 1)
+    print(tr(9), 82, 78, s_no and 7 or 5)
+  end
 end
 
 
@@ -1947,13 +2080,21 @@ function dibujar_categorias_juego(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, 
   cls(c_bg)
   local g = mis_juegos[juego_activo]
   if not g then return end
+  local lim_c = juegos_exp[juego_activo] and 20 or 12
+  local ult_i = ultimo_cat_inc[juego_activo] or 0
 
   rectfill(0, 0, 127, 22, c_pan)
   line(0, 22, 127, 22, c_acc)
   dibujar_portada_aislada(3, 2, gen, c_acc, c_txt)
   print(sub(g.nombre, 1, 18), 24, 3, 7)
-  print(tr(5) .. " (" .. #g.cats .. "/12)", 24, 12, c_txt)
-  print("t:" .. sub(nombres_temas[idx_t_act], 1, 3), 102, 12, 11)
+  print(tr(5) .. " (" .. #g.cats .. "/" .. lim_c .. ")", 24, 12, c_txt)
+  if juegos_exp[juego_activo] and ult_i > 0 and g.cats[ult_i] then
+    local hr = ultimo_hora_inc[juego_activo]
+    local tag_u = "*" .. sub(cat_tr(g.cats[ult_i]), 1, 5) .. (hr != "" and (" " .. hr) or "")
+    print(tag_u, 78, 12, 10)
+  else
+    print("$" .. monedas, 104, 12, 10)
+  end
 
   if cat_cursor == 0 then
     rectfill(4, 25, 123, 34, c_acc)
@@ -2229,6 +2370,7 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
 
   local estilos_nom = {"#1", "#2", "#3", "#4", "#5", "#6", "#7"}
   local fx_nom = {"off", "slide", "spring", "pulse", "wave"}
+  local pets_nom = {"frog", "cat", "dog", "turtle"}
   local items = {
     {tr(1), "<" .. cod_lang[idioma] .. ">"},
     {tr(12), estilos_nom[ui_estilo]},
@@ -2239,6 +2381,7 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
     {tr(16), modo_animo == 1 and "on" or "off"},
     {tr(17), emocion_fija == 0 and "auto" or ("#" .. emocion_fija)},
     {"pet " .. tr(17), ranita_oculta == 0 and "on" or "off"},
+    {"pet:", pets_nom[(pet_tipo or 0) + 1] or "frog"},
     {tr(18), "[cfg]"},
     {tr(11), "[>]"},
     {lbl_reset[idioma] or "reset all:", "[!]"}
@@ -2250,11 +2393,11 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
       local ly = 20 + (slot - 1) * 17
       local sel = (opt_cursor == idx)
       local dx, _, pd = calc_fx(sel, idx)
-      local bg_col = sel and (idx == 12 and 8 or c_acc) or c_pan
+      local bg_col = sel and (idx == 13 and 8 or c_acc) or c_pan
       rectfill(5 + dx - pd, ly, 122 + dx + pd, ly + 13, bg_col)
-      print((sel and "> " or "  ") .. items[idx][1], 8 + dx, ly + 4, sel and 7 or (idx == 12 and 8 or c_txt))
+      print((sel and "> " or "  ") .. items[idx][1], 8 + dx, ly + 4, sel and 7 or (idx == 13 and 8 or c_txt))
       local val_s = items[idx][2]
-      print(val_s, 119 + dx - #val_s * 4, ly + 4, sel and 7 or (idx == 12 and 8 or 11))
+      print(val_s, 119 + dx - #val_s * 4, ly + 4, sel and 7 or (idx == 13 and 8 or 11))
     end
   end
 
@@ -2321,7 +2464,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.07",
+    "version: v0.08",
     "",
     tr(37),
     "martstartiv",
@@ -2362,6 +2505,54 @@ function dibujar_ranita(x, y)
   local ry = y + off_y
   rectfill(x, ry + 2, x + 10, ry + 10, 3)
   rectfill(x + 1, ry + 3, x + 9, ry + 10, 11)
+
+  if pet_tipo == 1 then
+    rectfill(x + 1, ry + 3, x + 9, ry + 10, 6)
+    pset(x + 1, ry + 1, 6) pset(x + 2, ry + 2, 14)
+    pset(x + 9, ry + 1, 6) pset(x + 8, ry + 2, 14)
+    if emocion_actual == 6 then
+      line(x + 2, ry + 5, x + 4, ry + 5, 0) line(x + 6, ry + 5, x + 8, ry + 5, 0)
+      if ranita_anim < 30 then print("z", x + 11, ry - 4, 7) end
+    elseif emocion_actual == 5 or emocion_actual == 8 then
+      rectfill(x + 1, ry + 4, x + 9, ry + 6, 0)
+    else
+      pset(x + 3, ry + 5, 11) pset(x + 7, ry + 5, 11)
+    end
+    pset(x + 5, ry + 7, 14)
+    if emocion_actual == 4 then line(x + 4, ry + 9, x + 6, ry + 9, 8) end
+    return
+  elseif pet_tipo == 2 then
+    rectfill(x + 1, ry + 2, x + 9, ry + 10, 4)
+    rectfill(x, ry + 3, x + 1, ry + 7, 9)
+    rectfill(x + 9, ry + 3, x + 10, ry + 7, 9)
+    rectfill(x + 3, ry + 6, x + 7, ry + 9, 15)
+    pset(x + 5, ry + 6, 0)
+    if emocion_actual == 6 then
+      line(x + 2, ry + 4, x + 4, ry + 4, 0) line(x + 6, ry + 4, x + 8, ry + 4, 0)
+      if ranita_anim < 30 then print("z", x + 11, ry - 4, 7) end
+    elseif emocion_actual == 5 or emocion_actual == 8 then
+      rectfill(x + 1, ry + 3, x + 9, ry + 5, 0)
+    else
+      pset(x + 3, ry + 4, 0) pset(x + 7, ry + 4, 0)
+    end
+    if emocion_actual == 4 then pset(x + 5, ry + 9, 8) end
+    return
+  elseif pet_tipo == 3 then
+    rectfill(x + 1, ry + 3, x + 9, ry + 8, 3)
+    rect(x + 2, ry + 4, x + 8, ry + 7, 11)
+    rectfill(x + 8, ry + 5, x + 11, ry + 8, 11)
+    rectfill(x + 2, ry + 9, x + 3, ry + 10, 11)
+    rectfill(x + 7, ry + 9, x + 8, ry + 10, 11)
+    if emocion_actual == 6 then
+      pset(x + 10, ry + 6, 0)
+      if ranita_anim < 30 then print("z", x + 11, ry - 4, 7) end
+    elseif emocion_actual == 5 or emocion_actual == 8 then
+      line(x + 9, ry + 5, x + 11, ry + 5, 0)
+    else
+      pset(x + 10, ry + 5, 7) pset(x + 10, ry + 6, 0)
+    end
+    return
+  end
 
   if emocion_actual == 6 then
     line(x, ry + 2, x + 2, ry + 2, 0)
