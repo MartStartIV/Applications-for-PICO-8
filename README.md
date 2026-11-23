@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.07</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.08</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,7 +188,16 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.24 (Counter Games Xtree V0.07) - current version</h4>
+    <h4>Version 0.25 (Counter Games Xtree V0.08) - current version</h4>
+    <ul>
+      <li>New features have been added to the app's options menu.</li>
+      <li>You can now choose your preferred pet (the default pet is the little frog).</li>
+      <li>A virtual currency system has been introduced, allowing you to add more categories than the app's default limit; this costs 12 coins.</li>
+      <li>With an active pet, you will earn credits every 5 minutes, which you can spend on the games you add to the app.</li>
+      <li>The little frog pet provides more credits than other pets, as it is the app's primary mascot.</li>
+      <li>An auto save feature is included to ensure you don't lose the credits you have earned.</li>
+    </ul>
+    <h4>Version 0.24 (Counter Games Xtree V0.07)</h4>
     <ul>
       <li>Some errors have been fixed.</li>
       <li>Movement effects have been added to the main menu and options menu interfaces, with options that can be selected via the settings.</li>
