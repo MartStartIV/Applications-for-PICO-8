@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.08]
+-- proyecto: counter games xtree [v0.09]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.08"
+  app_ver = "v0.09"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -183,6 +183,37 @@ function _init()
   local fila = txt_ui[idioma]
   if fila and fila[idx] then return fila[idx] end
   return ""
+  end
+
+  txt_ext_raw = {
+    "efecto ui:|mascota:|mem. 8x:|ampliar 12->20?|costo: 12 monedas|formatear lista?",
+    "fx ui:|pet:|mem 8x:|expand 12->20?|cost: 12 coins|format list?",
+    "efekt ui:|zwierzak:|pamiec 8x:|rozsz. 12->20?|koszt: 12 monet|formatuj liste?",
+    "effekt ui:|pitomec:|pamyat 8x:|rassh. 12->20?|cena: 12 monet|ochistit spisok?",
+    "efeito ui:|mascote:|mem. 8x:|ampliar 12->20?|custo: 12 moedas|formatar lista?",
+    "effetto ui:|mascotte:|mem. 8x:|espandi 12->20?|costo: 12 monete|formatta lista?",
+    "effet ui:|animal:|mem. 8x:|etendre 12->20?|cout: 12 pieces|formater liste?",
+    "kouka ui:|petto:|memori 8x:|kakuchou 12->20?|hiyou: 12 koin|risuto shokika?",
+    "dongxiao:|chongwu:|neicun 8x:|kuozhan 12->20?|huafei: 12 jinbi|geshihua liebiao?",
+    "hyogwa ui:|paet:|memori 8x:|hwakjang 12->20?|biyong: 12 koin|mokrok chogihwa?",
+    "efekt ui:|evcil:|bellek 8x:|genislet 12->20?|bedel: 12 jeton|listeyi sil?",
+    "effekt ui:|haustier:|speicher 8x:|erweit. 12->20?|kosten: 12 munzen|liste loschen?",
+    "tathir ui:|hayawan:|dhakira 8x:|tawsi 12->20?|taklifa: 12 umla|tahiya qaima?",
+    "prabhav:|paltu:|memori 8x:|badhaye 12->20?|mulya: 12 sikke|suchi mitaye?",
+    "effect ui:|huisdier:|geheug. 8x:|uitbr. 12->20?|kosten: 12 munten|lijst wissen?",
+    "effekt ui:|husdjur:|minne 8x:|utoka 12->20?|kostnad: 12 mynt|formatera lista?",
+    "efek ui:|peliharaan:|memori 8x:|perluas 12->20?|biaya: 12 koin|format daftar?",
+    "hieu ung:|thu cung:|bo nho 8x:|mo rong 12->20?|gia: 12 xu|dinh dang ds?"
+  }
+  txt_ext = {}
+  for l = 1, 18 do
+    txt_ext[l] = dividir_pipe(txt_ext_raw[l])
+  end
+
+  function tr_ext(idx)
+    local fila = txt_ext[idioma]
+    if fila and fila[idx] then return fila[idx] end
+    return ""
   end
   
   function cat_tr(cid)
@@ -359,6 +390,10 @@ function _init()
   confirm_exp_abierta = false
   confirm_exp_cursor = 2
   pendiente_cid = 0
+  mem_ext = 0
+  juego_scroll = 0
+  confirm_mem_abierta = false
+  confirm_mem_cursor = 2
   ui_fx = 1
   menu_anim = 0
   inactivo_t = 0
@@ -470,75 +505,261 @@ function crear_objeto_juego(id_j, nom_custom)
   }
 end
 
+function aplicar_cambio_memoria(nuevo_modo)
+  mem_ext = nuevo_modo
+  mis_juegos = {}
+  juego_sel = 1
+  juego_scroll = 0
+  juego_activo = 1
+  juegos_exp = {false, false, false, false, false, false, false, false}
+  ultimo_cat_inc = {0, 0, 0, 0, 0, 0, 0, 0}
+  ultimo_hora_inc = {"", "", "", "", "", "", "", ""}
+  guardar_datos()
+  mostrar_aviso(mem_ext == 1 and "8-game mem on!" or "std 4-game mem!", 55)
+end
 
 function guardar_datos()
   local cfg0 = 1000 + idioma + (tema_idx * 32) + (ui_estilo * 1024) + (modo_animo * 8192)
   local sub0 = emocion_fija + (tema_auto_juego * 32) + (ranita_oculta * 64) + (ui_zoom * 128)
   dset(0, cfg0 + (sub0 / 256))
 
-  local b_pack = btn_cfg[1] + (btn_cfg[2] * 8) + (btn_cfg[3] * 64) + (btn_cfg[4] * 512) + (btn_cfg[5] * 4096)
-  dset(1, b_pack + ((#mis_juegos + (ui_fx * 5)) / 32))
+  local b_pack = 0
+  local b_mult = 1
+  for i = 1, 5 do
+    b_pack = b_pack + ((btn_cfg[i] or 0) * b_mult)
+    b_mult = b_mult * 8
+  end
 
   local nu = nombre_usuario or "gamer"
   dset(2, empaquetar_4ch(sub(nu, 1, 4)))
   dset(3, empaquetar_4ch(sub(nu, 5, 8)))
   dset(4, empaquetar_4ch(sub(nu, 9, 12)))
 
-  for j = 1, 4 do
-    local g = mis_juegos[j]
-    if g then
-      local n_cats = min(#g.cats, 20)
-      if g.id_juego and g.id_juego > 0 then
-        dset(4 + j, g.id_juego + (n_cats / 32))
-      else
-        dset(4 + j, -empaquetar_4ch(sub(g.nombre, 1, 4)))
-      end
-    else
-      dset(4 + j, 0)
-    end
-  end
-
-  local slot = 9
-  for j = 1, 4 do
-    local g = mis_juegos[j]
-    if g then
-      local n_cats = min(#g.cats, 20)
-      if (not g.id_juego or g.id_juego == 0) and slot <= 59 then
-        dset(slot, n_cats)
-        slot = slot + 1
-        dset(slot, empaquetar_4ch(sub(g.nombre, 5, 8)))
-        slot = slot + 1
-      end
-      for c = 1, n_cats do
-        if slot <= 60 then
-          local cid = min(max(g.cats[c] or 1, 1), 60)
-          local cval = min(max(flr(g.vals[c] or 0), 0), 32760)
-          dset(slot, cval + (cid / 64))
+  if mem_ext == 1 then
+    dset(1, b_pack + (ui_fx / 8))
+    local slot = 13
+    for j = 1, 8 do
+      local g = mis_juegos[j]
+      if g then
+        local n_cats = min(#g.cats, 20)
+        if g.id_juego and g.id_juego > 0 then
+          dset(4 + j, g.id_juego + (n_cats / 32))
+        else
+          dset(4 + j, -empaquetar_4ch(sub(g.nombre, 1, 4)))
+        end
+        if (not g.id_juego or g.id_juego == 0) and slot <= 59 then
+          dset(slot, n_cats)
           slot = slot + 1
+          dset(slot, empaquetar_4ch(sub(g.nombre, 5, 8)))
+          slot = slot + 1
+        end
+        local c = 1
+        while c <= n_cats and slot <= 60 do
+          local cid1 = min(max(g.cats[c] or 1, 1), 60)
+          local val1 = min(max(flr(g.vals[c] or 0), 0), 511)
+          local ent_p = cid1 + (val1 * 64)
+          local dec_p = 0
+          if c + 1 <= n_cats then
+            local cid2 = min(max(g.cats[c + 1] or 1, 1), 60)
+            local val2 = min(max(flr(g.vals[c + 1] or 0), 0), 511)
+            dec_p = (cid2 + (val2 * 64)) / 32768
+          end
+          dset(slot, ent_p + dec_p)
+          slot = slot + 1
+          c = c + 2
+        end
+      else
+        dset(4 + j, 0)
+      end
+    end
+    while slot <= 60 do
+      dset(slot, 0)
+      slot = slot + 1
+    end
+  else
+    dset(1, b_pack + ((#mis_juegos + (ui_fx * 5)) / 32))
+    for j = 1, 4 do
+      local g = mis_juegos[j]
+      if g then
+        local n_cats = min(#g.cats, 20)
+        if g.id_juego and g.id_juego > 0 then
+          dset(4 + j, g.id_juego + (n_cats / 32))
+        else
+          dset(4 + j, -empaquetar_4ch(sub(g.nombre, 1, 4)))
+        end
+      else
+        dset(4 + j, 0)
+      end
+    end
+    local slot = 9
+    for j = 1, 4 do
+      local g = mis_juegos[j]
+      if g then
+        local n_cats = min(#g.cats, 20)
+        if (not g.id_juego or g.id_juego == 0) and slot <= 59 then
+          dset(slot, n_cats)
+          slot = slot + 1
+          dset(slot, empaquetar_4ch(sub(g.nombre, 5, 8)))
+          slot = slot + 1
+        end
+        for c = 1, n_cats do
+          if slot <= 60 then
+            local cid = min(max(g.cats[c] or 1, 1), 60)
+            local cval = min(max(flr(g.vals[c] or 0), 0), 32760)
+            dset(slot, cval + (cid / 64))
+            slot = slot + 1
+          end
         end
       end
     end
-  end
-  while slot <= 60 do
-    dset(slot, 0)
-    slot = slot + 1
+    while slot <= 60 do
+      dset(slot, 0)
+      slot = slot + 1
+    end
   end
 
   local mask_exp = 0
   local mult = 1
-  for j = 1, 4 do
+  for j = 1, 8 do
     if juegos_exp[j] then mask_exp = mask_exp + mult end
     mult = mult * 2
   end
-  local dec61 = mask_exp + (pet_tipo * 16)
+  local dec61 = (mem_ext * 4) + (pet_tipo * 16)
   dset(61, 1000 + min(max(flr(monedas), 0), 999) + (dec61 / 64))
-  dset(62, flr(uso_frames))
-  local u1 = (ultimo_cat_inc[1] or 0) % 32
-  local u2 = (ultimo_cat_inc[2] or 0) % 32
-  local u3 = (ultimo_cat_inc[3] or 0) % 32
-  local u4 = (ultimo_cat_inc[4] or 0) % 32
-  dset(63, u1 + (u2 * 32) + (u3 * 1024) + (u4 / 32))
+  dset(62, flr(uso_frames) + (mask_exp / 256))
+
+  local u_ent = 0
+  local u_mult = 1
+  for j = 1, 3 do
+    local uv = (ultimo_cat_inc[j] or 0) % 32
+    u_ent = u_ent + (uv * u_mult)
+    u_mult = u_mult * 32
+  end
+  local u_dec = ((ultimo_cat_inc[4] or 0) % 32) / 32
+  dset(63, u_ent + u_dec)
 end
+
+function guardar_datos()
+  local cfg0 = 1000 + idioma + (tema_idx * 32) + (ui_estilo * 1024) + (modo_animo * 8192)
+  local sub0 = emocion_fija + (tema_auto_juego * 32) + (ranita_oculta * 64) + (ui_zoom * 128)
+  dset(0, cfg0 + (sub0 / 256))
+
+  local b_pack = 0
+  local b_mult = 1
+  for i = 1, 5 do
+    b_pack = b_pack + ((btn_cfg[i] or 0) * b_mult)
+    b_mult = b_mult * 8
+  end
+
+  local nu = nombre_usuario or "gamer"
+  dset(2, empaquetar_4ch(sub(nu, 1, 4)))
+  dset(3, empaquetar_4ch(sub(nu, 5, 8)))
+  dset(4, empaquetar_4ch(sub(nu, 9, 12)))
+
+  if mem_ext == 1 then
+    dset(1, b_pack + (ui_fx / 8))
+    local slot = 13
+    for j = 1, 8 do
+      local g = mis_juegos[j]
+      if g then
+        local n_cats = min(#g.cats, 20)
+        if g.id_juego and g.id_juego > 0 then
+          dset(4 + j, g.id_juego + (n_cats / 32))
+        else
+          dset(4 + j, -empaquetar_4ch(sub(g.nombre, 1, 4)))
+        end
+        if (not g.id_juego or g.id_juego == 0) and slot <= 59 then
+          dset(slot, n_cats)
+          slot = slot + 1
+          dset(slot, empaquetar_4ch(sub(g.nombre, 5, 8)))
+          slot = slot + 1
+        end
+        local c = 1
+        while c <= n_cats and slot <= 60 do
+          local cid1 = min(max(g.cats[c] or 1, 1), 60)
+          local val1 = min(max(flr(g.vals[c] or 0), 0), 511)
+          local ent_p = cid1 + (val1 * 64)
+          local dec_p = 0
+          if c + 1 <= n_cats then
+            local cid2 = min(max(g.cats[c + 1] or 1, 1), 60)
+            local val2 = min(max(flr(g.vals[c + 1] or 0), 0), 511)
+            dec_p = (cid2 + (val2 * 64)) / 32768
+          end
+          dset(slot, ent_p + dec_p)
+          slot = slot + 1
+          c = c + 2
+        end
+      else
+        dset(4 + j, 0)
+      end
+    end
+    while slot <= 60 do
+      dset(slot, 0)
+      slot = slot + 1
+    end
+  else
+    dset(1, b_pack + ((#mis_juegos + (ui_fx * 5)) / 32))
+    for j = 1, 4 do
+      local g = mis_juegos[j]
+      if g then
+        local n_cats = min(#g.cats, 20)
+        if g.id_juego and g.id_juego > 0 then
+          dset(4 + j, g.id_juego + (n_cats / 32))
+        else
+          dset(4 + j, -empaquetar_4ch(sub(g.nombre, 1, 4)))
+        end
+      else
+        dset(4 + j, 0)
+      end
+    end
+    local slot = 9
+    for j = 1, 4 do
+      local g = mis_juegos[j]
+      if g then
+        local n_cats = min(#g.cats, 20)
+        if (not g.id_juego or g.id_juego == 0) and slot <= 59 then
+          dset(slot, n_cats)
+          slot = slot + 1
+          dset(slot, empaquetar_4ch(sub(g.nombre, 5, 8)))
+          slot = slot + 1
+        end
+        for c = 1, n_cats do
+          if slot <= 60 then
+            local cid = min(max(g.cats[c] or 1, 1), 60)
+            local cval = min(max(flr(g.vals[c] or 0), 0), 32760)
+            dset(slot, cval + (cid / 64))
+            slot = slot + 1
+          end
+        end
+      end
+    end
+    while slot <= 60 do
+      dset(slot, 0)
+      slot = slot + 1
+    end
+  end
+
+  local mask_exp = 0
+  local mult = 1
+  for j = 1, 8 do
+    if juegos_exp[j] then mask_exp = mask_exp + mult end
+    mult = mult * 2
+  end
+  local dec61 = (mem_ext * 4) + (pet_tipo * 16)
+  dset(61, 1000 + min(max(flr(monedas), 0), 999) + (dec61 / 64))
+  dset(62, flr(uso_frames) + (mask_exp / 256))
+
+  local u_ent = 0
+  local u_mult = 1
+  for j = 1, 3 do
+    local uv = (ultimo_cat_inc[j] or 0) % 32
+    u_ent = u_ent + (uv * u_mult)
+    u_mult = u_mult * 32
+  end
+  local u_dec = ((ultimo_cat_inc[#ultimo_cat_inc] or 0) % 32) / 32
+  dset(63, u_ent + u_dec)
+end
+
 -- =========================================================
 -- parte 2b: lectura de datos guardados (64 slots)
 -- =========================================================
@@ -575,100 +796,158 @@ function cargar_datos()
         tmp1 = flr(tmp1 / 8)
       end
     end
-    local dec1 = flr((v1 - ent1) * 32 + 0.5)
-    local tot_juegos = min(dec1 % 5, 4)
-    ui_fx = min(flr(dec1 / 5), 4)
+
+    local v61 = dget(61) or 0
+    local ent61 = flr(v61)
+    local v62 = dget(62) or 0
+    uso_frames = max(0, flr(v62))
+    local mask_exp = 0
+    if ent61 >= 1000 then
+      monedas = min(max(ent61 - 1000, 0), 999)
+      local dec61 = flr((v61 - ent61) * 64 + 0.5)
+      mem_ext = flr(dec61 / 4) % 2
+      pet_tipo = flr(dec61 / 16) % 4
+      mask_exp = flr((v62 - uso_frames) * 256 + 0.5)
+      if mask_exp == 0 then mask_exp = dec61 % 4 end
+    else
+      monedas = 20
+      pet_tipo = 0
+      mem_ext = 0
+    end
+
+    juegos_exp = {}
+    local m_tmp = mask_exp
+    for j = 1, 8 do
+      juegos_exp[j] = (m_tmp % 2) == 1
+      m_tmp = flr(m_tmp / 2)
+    end
 
     local nu = desempaquetar_4ch(dget(2)) .. desempaquetar_4ch(dget(3)) .. desempaquetar_4ch(dget(4))
     nu = limpiar_espacios_der(nu)
     nombre_usuario = (#nu > 0) and nu or "gamer"
 
     mis_juegos = {}
-    local slot = 9
-    for j = 1, tot_juegos do
-      local vj = dget(4 + j) or 0
-      if vj > 0 then
-        local id_j = flr(vj)
-        local n_cats = min(flr((vj - id_j) * 32 + 0.5), 20)
-        if n_cats < 1 then n_cats = 7 end
-        local g = crear_objeto_juego(id_j, nil)
-        g.cats = {}
-        g.vals = {}
-        for c = 1, n_cats do
-          if slot <= 60 then
+    if mem_ext == 1 then
+      ui_fx = min(flr((v1 - ent1) * 8 + 0.5), 4)
+      local slot = 13
+      for j = 1, 8 do
+        local vj = dget(4 + j) or 0
+        if vj != 0 then
+          local g = nil
+          local n_cats = 7
+          if vj > 0 then
+            local id_j = flr(vj)
+            n_cats = min(flr((vj - id_j) * 32 + 0.5), 20)
+            if n_cats < 1 then n_cats = 7 end
+            g = crear_objeto_juego(id_j, nil)
+          else
+            local p1 = limpiar_espacios_der(desempaquetar_4ch(-vj))
+            local p2 = ""
+            if slot <= 59 then
+              n_cats = min(max(flr(dget(slot) or 7), 1), 20)
+              slot = slot + 1
+              p2 = limpiar_espacios_der(desempaquetar_4ch(dget(slot) or 0))
+              slot = slot + 1
+            end
+            g = crear_objeto_juego(0, p1 .. p2)
+          end
+          g.cats = {}
+          g.vals = {}
+          local c = 1
+          while c <= n_cats and slot <= 60 do
             local sc = dget(slot) or 0
             slot = slot + 1
-            local cval = flr(sc)
-            local cid = flr((sc - cval) * 64 + 0.5)
-            if cid < 1 or cid > 60 then cid = c end
-            add(g.cats, cid)
-            add(g.vals, max(0, cval))
+            local ent_p = flr(sc)
+            local cid1 = ent_p % 64
+            local val1 = flr(ent_p / 64)
+            if cid1 < 1 or cid1 > 60 then cid1 = c end
+            add(g.cats, cid1)
+            add(g.vals, max(0, val1))
+            if c + 1 <= n_cats then
+              local dec_p = flr((sc - ent_p) * 32768 + 0.5)
+              local cid2 = dec_p % 64
+              local val2 = flr(dec_p / 64)
+              if cid2 < 1 or cid2 > 60 then cid2 = c + 1 end
+              add(g.cats, cid2)
+              add(g.vals, max(0, val2))
+            end
+            c = c + 2
           end
+          add(mis_juegos, g)
         end
-        add(mis_juegos, g)
-      elseif vj < 0 then
-        local p1 = limpiar_espacios_der(desempaquetar_4ch(-vj))
-        local n_cats = 7
-        local p2 = ""
-        if slot <= 59 then
-          n_cats = min(max(flr(dget(slot) or 7), 1), 20)
-          slot = slot + 1
-          p2 = limpiar_espacios_der(desempaquetar_4ch(dget(slot) or 0))
-          slot = slot + 1
-        end
-        local g = crear_objeto_juego(0, p1 .. p2)
-        g.cats = {}
-        g.vals = {}
-        for c = 1, n_cats do
-          if slot <= 60 then
-            local sc = dget(slot) or 0
+      end
+    else
+      local dec1 = flr((v1 - ent1) * 32 + 0.5)
+      local tot_juegos = min(dec1 % 5, 4)
+      ui_fx = min(flr(dec1 / 5), 4)
+      local slot = 9
+      for j = 1, tot_juegos do
+        local vj = dget(4 + j) or 0
+        if vj > 0 then
+          local id_j = flr(vj)
+          local n_cats = min(flr((vj - id_j) * 32 + 0.5), 20)
+          if n_cats < 1 then n_cats = 7 end
+          local g = crear_objeto_juego(id_j, nil)
+          g.cats = {}
+          g.vals = {}
+          for c = 1, n_cats do
+            if slot <= 60 then
+              local sc = dget(slot) or 0
+              slot = slot + 1
+              local cval = flr(sc)
+              local cid = flr((sc - cval) * 64 + 0.5)
+              if cid < 1 or cid > 60 then cid = c end
+              add(g.cats, cid)
+              add(g.vals, max(0, cval))
+            end
+          end
+          add(mis_juegos, g)
+        elseif vj < 0 then
+          local p1 = limpiar_espacios_der(desempaquetar_4ch(-vj))
+          local n_cats = 7
+          local p2 = ""
+          if slot <= 59 then
+            n_cats = min(max(flr(dget(slot) or 7), 1), 20)
             slot = slot + 1
-            local cval = flr(sc)
-            local cid = flr((sc - cval) * 64 + 0.5)
-            if cid < 1 or cid > 60 then cid = c end
-            add(g.cats, cid)
-            add(g.vals, max(0, cval))
+            p2 = limpiar_espacios_der(desempaquetar_4ch(dget(slot) or 0))
+            slot = slot + 1
           end
+          local g = crear_objeto_juego(0, p1 .. p2)
+          g.cats = {}
+          g.vals = {}
+          for c = 1, n_cats do
+            if slot <= 60 then
+              local sc = dget(slot) or 0
+              slot = slot + 1
+              local cval = flr(sc)
+              local cid = flr((sc - cval) * 64 + 0.5)
+              if cid < 1 or cid > 60 then cid = c end
+              add(g.cats, cid)
+              add(g.vals, max(0, cval))
+            end
+          end
+          add(mis_juegos, g)
         end
-        add(mis_juegos, g)
       end
     end
 
-    local v61 = dget(61) or 0
-    local ent61 = flr(v61)
-    if ent61 >= 1000 then
-      monedas = min(max(ent61 - 1000, 0), 999)
-      local dec61 = flr((v61 - ent61) * 64 + 0.5)
-      local mask_exp = dec61 % 16
-      juegos_exp = {
-        (mask_exp % 2) == 1,
-        (flr(mask_exp / 2) % 2) == 1,
-        (flr(mask_exp / 4) % 2) == 1,
-        (flr(mask_exp / 8) % 2) == 1
-      }
-      pet_tipo = flr(dec61 / 16) % 4
-    else
-      monedas = 20
-      pet_tipo = 0
-      juegos_exp = {false, false, false, false}
-    end
-
-    uso_frames = max(0, flr(dget(62) or 0))
     local v63 = dget(63) or 0
     local ent63 = flr(v63)
     ultimo_cat_inc = {
       ent63 % 32,
       flr(ent63 / 32) % 32,
       flr(ent63 / 1024) % 32,
-      flr((v63 - ent63) * 32 + 0.5) % 32
+      flr((v63 - ent63) * 32 + 0.5) % 32,
+      0, 0, 0, 0
     }
     estado = 2
   else
     monedas = 20
     pet_tipo = 0
     uso_frames = 0
-    juegos_exp = {false, false, false, false}
-    ultimo_cat_inc = {0, 0, 0, 0}
+    mem_ext = 0
+    juegos_exp = {false, false, false, false, false, false, false, false}
+    ultimo_cat_inc = {0, 0, 0, 0, 0, 0, 0, 0}
     estado = 0
   end
 end
@@ -692,9 +971,11 @@ function borrar_todo_guardado()
   pet_tipo = 0
   monedas = 20
   uso_frames = 0
-  juegos_exp = {false, false, false, false}
-  ultimo_cat_inc = {0, 0, 0, 0}
-  ultimo_hora_inc = {"", "", "", ""}
+  juegos_exp = {false, false, false, false, false, false, false, false}
+  ultimo_cat_inc = {0, 0, 0, 0, 0, 0, 0, 0}
+  ultimo_hora_inc = {"", "", "", "", "", "", "", ""}
+  mem_ext = 0
+  juego_scroll = 0
   ui_fx = 1
   tema_auto_juego = 1
   btn_cfg = {4, 5, 1, 0, 2}
@@ -867,10 +1148,30 @@ end
 -- parte 3b: menu principal y teclado virtual
 -- =========================================================
 
+function calc_mem_libre()
+  local slots_tot = (mem_ext == 1) and 48 or 52
+  local slots_usados = 0
+  for j = 1, #mis_juegos do
+    local g = mis_juegos[j]
+    if not g.id_juego or g.id_juego == 0 then
+      slots_usados = slots_usados + 2
+    end
+    local nc = #g.cats
+    slots_usados = slots_usados + ((mem_ext == 1) and flr((nc + 1) / 2) or nc)
+  end
+  local slots_libres = max(0, slots_tot - slots_usados)
+  local cats_libres = (mem_ext == 1) and (slots_libres * 2) or slots_libres
+  local max_j = (mem_ext == 1) and 8 or 4
+  local j_por_mem = flr(cats_libres / 12)
+  local juegos_disp = min(max_j - #mis_juegos, j_por_mem)
+  return cats_libres, max(0, juegos_disp), max_j
+end
+
 function actualizar_menu_principal()
   local k3 = 3
   local total_g = #mis_juegos
   local max_fila = total_g + 1
+  local max_j = (mem_ext == 1) and 8 or 4
 
   if btn(5) then
     if btnp(3) and juego_sel >= 2 and juego_sel <= max_fila then
@@ -878,6 +1179,7 @@ function actualizar_menu_principal()
       guardar_datos()
       if #mis_juegos == 0 then
         juego_sel = 1
+        juego_scroll = 0
       elseif juego_sel > #mis_juegos + 1 then
         juego_sel = #mis_juegos + 1
       end
@@ -897,19 +1199,31 @@ function actualizar_menu_principal()
     menu_anim = 10
   end
 
+  if juego_sel >= 2 then
+    local g_pos = juego_sel - 1
+    if g_pos <= juego_scroll then
+      juego_scroll = g_pos - 1
+    elseif g_pos > juego_scroll + 4 then
+      juego_scroll = g_pos - 4
+    end
+  else
+    juego_scroll = 0
+  end
+
   if juego_sel == 0 and btnp(4) then
     opt_cursor = 1
     opt_scroll = 0
     sub_btn_abierta = false
     confirm_reset_abierta = false
+    confirm_mem_abierta = false
     modal_anim = 6
     cambiar_estado(6)
     return
   end
 
   if juego_sel == 1 and btnp(4) then
-    if total_g >= 4 then
-      mostrar_aviso(tr(31), 45)
+    if total_g >= max_j then
+      mostrar_aviso("max " .. max_j .. " games!", 45)
     else
       busq_texto = ""
       busq_cursor = 1
@@ -937,6 +1251,7 @@ function actualizar_menu_principal()
     end
   end
 end
+
 
 
 teclado_letras = {
@@ -1219,12 +1534,19 @@ function actualizar_buscador_categorias()
               mostrar_aviso("- " .. cat_tr(cid), 30)
             end
           else
+            local cats_lib, _, _ = calc_mem_libre()
             local lim_c = juegos_exp[juego_activo] and 20 or 12
-            if #g.cats >= lim_c then
+            if cats_lib <= 0 then
+              mostrar_aviso("mem full!", 40)
+            elseif #g.cats >= lim_c then
               if not juegos_exp[juego_activo] then
-                pendiente_cid = cid
-                confirm_exp_abierta = true
-                confirm_exp_cursor = 1
+                if cats_lib < 8 then
+                  mostrar_aviso("low mem (" .. cats_lib .. "c)!", 45)
+                else
+                  pendiente_cid = cid
+                  confirm_exp_abierta = true
+                  confirm_exp_cursor = 1
+                end
               else
                 mostrar_aviso("max 20 cats!", 35)
               end
@@ -1334,7 +1656,8 @@ function actualizar_categorias_juego()
     local b_restar = btn_cfg[k2] or 5
 
     if btnp(b_sumar) then
-      g.vals[cat_cursor] = min((g.vals[cat_cursor] or 0) + 1, 32760)
+      local tope_v = (mem_ext == 1) and 511 or 32760
+      g.vals[cat_cursor] = min((g.vals[cat_cursor] or 0) + 1, tope_v)
       ultimo_cat_inc[juego_activo] = cat_cursor
       ultimo_hora_inc[juego_activo] = sub(reloj_str, 1, 5)
       guardar_datos()
@@ -1361,7 +1684,20 @@ end
 
 
 function actualizar_opciones()
-  -- 1. Si esta abierta la confirmacion de Borrar Todo
+  if confirm_mem_abierta then
+    if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
+      confirm_mem_cursor = (confirm_mem_cursor == 1) and 2 or 1
+    elseif btnp(4) then
+      if confirm_mem_cursor == 1 then
+        aplicar_cambio_memoria((mem_ext == 0) and 1 or 0)
+      end
+      confirm_mem_abierta = false
+    elseif btnp(5) then
+      confirm_mem_abierta = false
+    end
+    return
+  end
+
   if confirm_reset_abierta then
     if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
       confirm_reset_cursor = (confirm_reset_cursor == 1) and 2 or 1
@@ -1377,7 +1713,6 @@ function actualizar_opciones()
     return
   end
 
-  -- 2. Si esta abierta la subventana de Botones
   if sub_btn_abierta then
     if btnp(5) then
       sub_btn_abierta = false
@@ -1407,8 +1742,7 @@ function actualizar_opciones()
     return
   end
 
-  -- 3. Navegacion principal de Opciones (ahora 10 opciones)
-  local max_opt = 13
+  local max_opt = 14
   if btnp(2) then
     opt_cursor = opt_cursor - 1
     if opt_cursor < 1 then opt_cursor = max_opt end
@@ -1465,17 +1799,22 @@ function actualizar_opciones()
     if izq then pet_tipo = (pet_tipo - 1) % 4 end
     if der or acc then pet_tipo = (pet_tipo + 1) % 4 end
   elseif opt_cursor == 11 then
+    if izq or der or acc then
+      confirm_mem_abierta = true
+      confirm_mem_cursor = 2
+    end
+  elseif opt_cursor == 12 then
     if acc or der then
       sub_btn_abierta = true
       sub_btn_cursor = 1
       modal_anim = 6
     end
-  elseif opt_cursor == 12 then
+  elseif opt_cursor == 13 then
     if acc or der then
       creditos_y = 128
       cambiar_estado(7)
     end
-  elseif opt_cursor == 13 then
+  elseif opt_cursor == 14 then
     if acc or der then
       confirm_reset_abierta = true
       confirm_reset_cursor = 2
@@ -1483,6 +1822,7 @@ function actualizar_opciones()
     end
   end
 end
+
 
 -- =========================================================
 -- parte 5a: motor grafico (_draw), led perimetral y portadas
@@ -1638,7 +1978,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.08", 12, 7, 7)
+  print("counter games xtree v0.09", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -1717,13 +2057,15 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
     print("  [" .. tr(6) .. "]", 7, 20, c_txt)
   end
 
+  local cats_lib, j_disp, max_j = calc_mem_libre()
   local dx1, _, p1 = calc_fx(juego_sel == 1, 1)
+  local lbl_add = "[+] " .. sub(tr(3), 1, 10) .. " (" .. #mis_juegos .. "/" .. max_j .. " +" .. j_disp .. ")"
   if juego_sel == 1 then
     rectfill(4 + dx1 - p1, 30, 123 + dx1 + p1, 40, c_acc)
-    print("> [+] " .. tr(3), 8 + dx1, 32, c_atxt)
+    print("> " .. lbl_add, 7 + dx1, 32, c_atxt)
   else
     rect(4, 30, 123, 40, c_acc)
-    print("  [+] " .. tr(3), 8, 32, 11)
+    print("  " .. lbl_add, 7, 32, 11)
   end
 
   if #mis_juegos == 0 then
@@ -1731,59 +2073,72 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
     print("< " .. tr(4) .. " >", 38, 74, 6)
   else
     if ui_estilo == 1 then
-      for i = 1, #mis_juegos do
-        local ly = 44 + (i - 1) * 16
-        local sel = (juego_sel == i + 1)
-        local dx, _, pd = calc_fx(sel, i + 1)
-        local nom = mis_juegos[i].nombre
-        if ui_zoom == 1 then nom = sub(nom, 1, 11) else nom = sub(nom, 1, 17) end
-        if sel then
-          rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, c_acc)
-          print((ui_zoom == 1 and "\^w>" or "> ") .. nom .. " >", 7 + dx, ly + 4, c_atxt)
-        else
-          rectfill(4, ly, 123, ly + 13, c_pan)
-          print((ui_zoom == 1 and "\^w " or "  ") .. nom, 7, ly + 4, c_txt)
+      for slot = 1, 4 do
+        local i = juego_scroll + slot
+        if i <= #mis_juegos then
+          local ly = 44 + (slot - 1) * 16
+          local sel = (juego_sel == i + 1)
+          local dx, _, pd = calc_fx(sel, i + 1)
+          local nom = mis_juegos[i].nombre
+          if ui_zoom == 1 then nom = sub(nom, 1, 11) else nom = sub(nom, 1, 17) end
+          if sel then
+            rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, c_acc)
+            print((ui_zoom == 1 and "\^w>" or "> ") .. nom .. " >", 7 + dx, ly + 4, c_atxt)
+          else
+            rectfill(4, ly, 123, ly + 13, c_pan)
+            print((ui_zoom == 1 and "\^w " or "  ") .. nom, 7, ly + 4, c_txt)
+          end
         end
       end
 
     elseif ui_estilo == 2 then
-      for i = 1, #mis_juegos do
-        local col = (i - 1) % 2
-        local fil = flr((i - 1) / 2)
-        local sel = (juego_sel == i + 1)
-        local dx, _, pd = calc_fx(sel, i + 1)
-        local cx = 4 + col * 61 + flr(dx * 0.5)
-        local cy = 44 + fil * 33
-        local gen_i = genero_de_juego(mis_juegos[i])
-        rectfill(cx - pd, cy, cx + 58 + pd, cy + 30, sel and c_acc or c_pan)
-        rect(cx - pd, cy, cx + 58 + pd, cy + 30, sel and 7 or c_acc)
-        dibujar_portada_aislada(cx + 3, cy + 3, gen_i, c_acc, c_txt)
-        if ui_zoom == 1 then
-          local nom_m = texto_marquee(mis_juegos[i].nombre, 4, sel)
-          print("\^w" .. nom_m, cx + 23, cy + 8, sel and c_atxt or c_txt)
-          local lbl_c = #mis_juegos[i].cats .. " " .. sub(tr(5), 1, 8)
-          print(lbl_c, cx + 4, cy + 23, sel and c_atxt or 11)
-        else
-          local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
-          print(nom_m, cx + 23, cy + 6, sel and c_atxt or c_txt)
-          local lbl_c = #mis_juegos[i].cats .. " " .. sub(tr(5), 1, 5)
-          print(lbl_c, cx + 23, cy + 16, sel and c_atxt or 11)
+      local pag_g = flr(max(0, juego_sel - 2) / 4) * 4
+      for slot = 1, 4 do
+        local i = pag_g + slot
+        if i <= #mis_juegos then
+          local col = (slot - 1) % 2
+          local fil = flr((slot - 1) / 2)
+          local sel = (juego_sel == i + 1)
+          local dx, _, pd = calc_fx(sel, i + 1)
+          local cx = 4 + col * 61 + flr(dx * 0.5)
+          local cy = 44 + fil * 33
+          local gen_i = genero_de_juego(mis_juegos[i])
+          rectfill(cx - pd, cy, cx + 58 + pd, cy + 30, sel and c_acc or c_pan)
+          rect(cx - pd, cy, cx + 58 + pd, cy + 30, sel and 7 or c_acc)
+          dibujar_portada_aislada(cx + 3, cy + 3, gen_i, c_acc, c_txt)
+          if ui_zoom == 1 then
+            local nom_m = texto_marquee(mis_juegos[i].nombre, 4, sel)
+            print("\^w" .. nom_m, cx + 23, cy + 8, sel and c_atxt or c_txt)
+            local lbl_c = #mis_juegos[i].cats .. " " .. sub(tr(5), 1, 8)
+            print(lbl_c, cx + 4, cy + 23, sel and c_atxt or 11)
+          else
+            local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
+            print(nom_m, cx + 23, cy + 6, sel and c_atxt or c_txt)
+            local lbl_c = #mis_juegos[i].cats .. " " .. sub(tr(5), 1, 5)
+            print(lbl_c, cx + 23, cy + 16, sel and c_atxt or 11)
+          end
         end
       end
 
     elseif ui_estilo == 3 then
+      local paso_x = (#mis_juegos > 4) and 14 or 29
+      local ini_x = (#mis_juegos > 4) and 14 or 20
       for i = 1, #mis_juegos do
         local sel = (juego_sel == i + 1)
         local dx, _, pd = calc_fx(sel, i + 1)
-        local mx = 20 + (i - 1) * 29
+        local mx = ini_x + (i - 1) * paso_x
         local my = 62 - flr(abs(dx) * 0.4)
-        local rad = ((ui_zoom == 1) and (sel and 14 or 12) or (sel and 13 or 11)) + pd
+        local rad = ((#mis_juegos > 4) and (sel and 9 or 6) or ((ui_zoom == 1) and (sel and 14 or 12) or (sel and 13 or 11))) + pd
         circfill(mx, my, rad, sel and c_acc or c_pan)
         circ(mx, my, rad, sel and 7 or c_acc)
-        if ui_zoom == 1 then
-          print("\^w" .. sub(mis_juegos[i].nombre, 1, 2), mx - 8, my - 2, sel and c_atxt or c_txt)
-        else
-          print(sub(mis_juegos[i].nombre, 1, 3), mx - 5, my - 2, sel and c_atxt or c_txt)
+        if #mis_juegos <= 4 then
+          if ui_zoom == 1 then
+            print("\^w" .. sub(mis_juegos[i].nombre, 1, 2), mx - 8, my - 2, sel and c_atxt or c_txt)
+          else
+            print(sub(mis_juegos[i].nombre, 1, 3), mx - 5, my - 2, sel and c_atxt or c_txt)
+          end
+        elseif sel then
+          print(tostr(i), mx - 1, my - 2, c_atxt)
         end
       end
       local idx_g = max(1, juego_sel - 1)
@@ -1825,70 +2180,79 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
         end
         line(10 + dx, 89, 117 + dx, 89, sel and c_atxt or c_acc)
         for d = 1, #mis_juegos do
-          local px = 48 + (d - 1) * 9 + dx
+          local px = 28 + (d - 1) * 8 + dx
           circfill(px, 98, (d == idx_g) and 3 or 1, (d == idx_g) and 7 or 5)
         end
         print(idx_g .. "/" .. #mis_juegos, 96 + dx, 95, sel and c_atxt or 6)
       end
 
     elseif ui_estilo == 6 then
-      for i = 1, #mis_juegos do
-        local ly = 44 + (i - 1) * 16
-        local sel = (juego_sel == i + 1)
-        local dx, _, pd = calc_fx(sel, i + 1)
-        local nc = #mis_juegos[i].cats
-        rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and c_acc or c_pan)
-        rectfill(4 + dx - pd, ly, 7 + dx - pd, ly + 13, sel and 7 or 11)
-        local bar_w = min(24, nc * 2)
-        rectfill(96 + dx, ly + 4, 96 + bar_w + dx, ly + 9, sel and c_atxt or 11)
-        rect(96 + dx, ly + 4, 120 + dx, ly + 9, sel and c_atxt or c_acc)
-        if ui_zoom == 1 then
-          local nom_m = texto_marquee(mis_juegos[i].nombre, 10, sel)
-          print("\^w" .. nom_m, 11 + dx, ly + 4, sel and c_atxt or c_txt)
-        else
-          local nom_m = texto_marquee(mis_juegos[i].nombre, 19, sel)
-          print(nom_m, 11 + dx, ly + 4, sel and c_atxt or c_txt)
+      for slot = 1, 4 do
+        local i = juego_scroll + slot
+        if i <= #mis_juegos then
+          local ly = 44 + (slot - 1) * 16
+          local sel = (juego_sel == i + 1)
+          local dx, _, pd = calc_fx(sel, i + 1)
+          local nc = #mis_juegos[i].cats
+          rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and c_acc or c_pan)
+          rectfill(4 + dx - pd, ly, 7 + dx - pd, ly + 13, sel and 7 or 11)
+          local bar_w = min(24, nc * 2)
+          rectfill(96 + dx, ly + 4, 96 + bar_w + dx, ly + 9, sel and c_atxt or 11)
+          rect(96 + dx, ly + 4, 120 + dx, ly + 9, sel and c_atxt or c_acc)
+          if ui_zoom == 1 then
+            local nom_m = texto_marquee(mis_juegos[i].nombre, 10, sel)
+            print("\^w" .. nom_m, 11 + dx, ly + 4, sel and c_atxt or c_txt)
+          else
+            local nom_m = texto_marquee(mis_juegos[i].nombre, 19, sel)
+            print(nom_m, 11 + dx, ly + 4, sel and c_atxt or c_txt)
+          end
         end
       end
 
     elseif ui_estilo == 7 then
-      for i = 1, #mis_juegos do
-        local ly = 44 + (i - 1) * 16
-        local sel = (juego_sel == i + 1)
-        local dx, _, pd = calc_fx(sel, i + 1)
-        local tot_pts = 0
-        for v = 1, #mis_juegos[i].vals do tot_pts = tot_pts + mis_juegos[i].vals[v] end
-        rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and c_pan or 0)
-        rect(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and 7 or c_acc)
-        rect(6 + dx, ly + 2, 121 + dx, ly + 11, sel and c_acc or c_pan)
-        if ui_zoom == 1 then
-          local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
-          print("\^w" .. nom_m, 9 + dx, ly + 4, sel and 7 or c_txt)
-          print("\^w" .. tot_pts, 118 + dx - (#tostr(tot_pts) * 8), ly + 4, 10)
-        else
-          local nom_m = texto_marquee(mis_juegos[i].nombre, 11, sel)
-          print("p" .. i .. ":" .. nom_m, 9 + dx, ly + 4, sel and 7 or c_txt)
-          print(tostr(tot_pts), 118 + dx - (#tostr(tot_pts) * 4), ly + 4, 10)
+      for slot = 1, 4 do
+        local i = juego_scroll + slot
+        if i <= #mis_juegos then
+          local ly = 44 + (slot - 1) * 16
+          local sel = (juego_sel == i + 1)
+          local dx, _, pd = calc_fx(sel, i + 1)
+          local tot_pts = 0
+          for v = 1, #mis_juegos[i].vals do tot_pts = tot_pts + mis_juegos[i].vals[v] end
+          rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and c_pan or 0)
+          rect(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and 7 or c_acc)
+          rect(6 + dx, ly + 2, 121 + dx, ly + 11, sel and c_acc or c_pan)
+          if ui_zoom == 1 then
+            local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
+            print("\^w" .. nom_m, 9 + dx, ly + 4, sel and 7 or c_txt)
+            print("\^w" .. tot_pts, 118 + dx - (#tostr(tot_pts) * 8), ly + 4, 10)
+          else
+            local nom_m = texto_marquee(mis_juegos[i].nombre, 11, sel)
+            print("p" .. i .. ":" .. nom_m, 9 + dx, ly + 4, sel and 7 or c_txt)
+            print(tostr(tot_pts), 118 + dx - (#tostr(tot_pts) * 4), ly + 4, 10)
+          end
         end
       end
 
     else
-      for i = 1, #mis_juegos do
-        local ly = 44 + (i - 1) * 16
-        local sel = (juego_sel == i + 1)
-        local dx, _, pd = calc_fx(sel, i + 1)
-        local tot_pts = 0
-        for v = 1, #mis_juegos[i].vals do tot_pts = tot_pts + mis_juegos[i].vals[v] end
-        rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and c_acc or 0)
-        rect(4 + dx - pd, ly, 123 + dx + pd, ly + 13, c_acc)
-        if ui_zoom == 1 then
-          local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
-          print("\^w" .. nom_m, 7 + dx, ly + 4, sel and c_atxt or c_txt)
-          print("\^w" .. tot_pts, 120 + dx - (#tostr(tot_pts) * 8), ly + 4, sel and c_atxt or 10)
-        else
-          local nom_m = texto_marquee(mis_juegos[i].nombre, 12, sel)
-          print("#" .. i .. " " .. nom_m, 7 + dx, ly + 4, sel and c_atxt or c_txt)
-          print("[" .. tot_pts .. "]", 92 + dx, ly + 4, sel and c_atxt or 10)
+      for slot = 1, 4 do
+        local i = juego_scroll + slot
+        if i <= #mis_juegos then
+          local ly = 44 + (slot - 1) * 16
+          local sel = (juego_sel == i + 1)
+          local dx, _, pd = calc_fx(sel, i + 1)
+          local tot_pts = 0
+          for v = 1, #mis_juegos[i].vals do tot_pts = tot_pts + mis_juegos[i].vals[v] end
+          rectfill(4 + dx - pd, ly, 123 + dx + pd, ly + 13, sel and c_acc or 0)
+          rect(4 + dx - pd, ly, 123 + dx + pd, ly + 13, c_acc)
+          if ui_zoom == 1 then
+            local nom_m = texto_marquee(mis_juegos[i].nombre, 8, sel)
+            print("\^w" .. nom_m, 7 + dx, ly + 4, sel and c_atxt or c_txt)
+            print("\^w" .. tot_pts, 120 + dx - (#tostr(tot_pts) * 8), ly + 4, sel and c_atxt or 10)
+          else
+            local nom_m = texto_marquee(mis_juegos[i].nombre, 12, sel)
+            print("#" .. i .. " " .. nom_m, 7 + dx, ly + 4, sel and c_atxt or c_txt)
+            print("[" .. tot_pts .. "]", 92 + dx, ly + 4, sel and c_atxt or 10)
+          end
         end
       end
     end
@@ -1899,6 +2263,7 @@ function dibujar_menu_principal(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, ge
   print(tr(20), 3, 118, 6)
   dibujar_ranita(112, 114)
 end
+
 
 
 -- =========================================================
@@ -2040,9 +2405,9 @@ function dibujar_buscador_modal(c_bg, c_pan, c_txt, c_acc, c_atxt, es_cat)
     rectfill(10, 34, 117, 94, 0)
     rect(10, 34, 117, 94, 10)
     rectfill(12, 36, 115, 45, 10)
-    print("+20 SLOTS (" .. monedas .. "$)", 26, 38, 0)
-    print("expand max 12 -> 20?", 16, 51, 7)
-    print("cost: 12 coins", 28, 61, 10)
+    print("+20 (" .. monedas .. "$)", 42, 38, 0)
+    print(sub(tr_ext(4), 1, 23), 15, 51, 7)
+    print(sub(tr_ext(5), 1, 23), 15, 61, 10)
     local s_si = (confirm_exp_cursor == 1)
     local s_no = (confirm_exp_cursor == 2)
     rectfill(20, 75, 56, 86, s_si and 11 or 1)
@@ -2374,14 +2739,15 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
   local items = {
     {tr(1), "<" .. cod_lang[idioma] .. ">"},
     {tr(12), estilos_nom[ui_estilo]},
-    {"fx ui:", fx_nom[ui_fx + 1]},
+    {tr_ext(1), fx_nom[ui_fx + 1]},
     {tr(13), nombres_temas[tema_idx]},
     {tr(14), tema_auto_juego == 1 and "on" or "off"},
     {tr(15), ui_zoom == 1 and "on" or "off"},
     {tr(16), modo_animo == 1 and "on" or "off"},
     {tr(17), emocion_fija == 0 and "auto" or ("#" .. emocion_fija)},
     {"pet " .. tr(17), ranita_oculta == 0 and "on" or "off"},
-    {"pet:", pets_nom[(pet_tipo or 0) + 1] or "frog"},
+    {tr_ext(2), pets_nom[(pet_tipo or 0) + 1] or "frog"},
+    {tr_ext(3), mem_ext == 1 and "on" or "off"},
     {tr(18), "[cfg]"},
     {tr(11), "[>]"},
     {lbl_reset[idioma] or "reset all:", "[!]"}
@@ -2393,11 +2759,11 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
       local ly = 20 + (slot - 1) * 17
       local sel = (opt_cursor == idx)
       local dx, _, pd = calc_fx(sel, idx)
-      local bg_col = sel and (idx == 13 and 8 or c_acc) or c_pan
+      local bg_col = sel and (idx == 14 and 8 or c_acc) or c_pan
       rectfill(5 + dx - pd, ly, 122 + dx + pd, ly + 13, bg_col)
-      print((sel and "> " or "  ") .. items[idx][1], 8 + dx, ly + 4, sel and 7 or (idx == 13 and 8 or c_txt))
+      print((sel and "> " or "  ") .. items[idx][1], 8 + dx, ly + 4, sel and 7 or (idx == 14 and 8 or c_txt))
       local val_s = items[idx][2]
-      print(val_s, 119 + dx - #val_s * 4, ly + 4, sel and 7 or (idx == 13 and 8 or 11))
+      print(val_s, 119 + dx - #val_s * 4, ly + 4, sel and 7 or (idx == 14 and 8 or 11))
     end
   end
 
@@ -2408,6 +2774,21 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
 
   if sub_btn_abierta then
     dibujar_subventana_botones(c_pan, c_txt, c_acc, c_atxt)
+  end
+
+  if confirm_mem_abierta then
+    rectfill(10, 34, 117, 94, 0)
+    rect(10, 34, 117, 94, 11)
+    rectfill(12, 36, 115, 45, 11)
+    print(sub(tr_ext(3), 1, 14), 38, 38, 0)
+    print(sub(tr_ext(6), 1, 23), 15, 51, 7)
+    print(sub(tr(19), 4, 23), 15, 61, 10)
+    local s_si = (confirm_mem_cursor == 1)
+    local s_no = (confirm_mem_cursor == 2)
+    rectfill(20, 75, 56, 86, s_si and 11 or 1)
+    print(tr(8), 32, 78, s_si and 0 or 5)
+    rectfill(70, 75, 106, 86, s_no and 8 or 1)
+    print(tr(9), 82, 78, s_no and 7 or 5)
   end
 
   if confirm_reset_abierta then
@@ -2464,7 +2845,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.08",
+    "version: v0.09",
     "",
     tr(37),
     "martstartiv",
