@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.09</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.10</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,7 +188,13 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.26 (Counter Games Xtree V0.09) - current version</h4>
+    <h4>Version 0.27 (Counter Games Xtree V0.10) - current version</h4>
+    <ul>
+      <li>Improvements have been added for the kitten and turtle pets :)</li>
+      <li>Some minor improvements have been applied.</li>
+      <li>It is recommended not to use the memory extension feature, as it may cause instability and errors when saving data, problem that is planned to be resolved in version 0.11 :)</li>
+    </ul>
+    <h4>Version 0.26 (Counter Games Xtree V0.09)</h4>
     <ul>
       <li>A new option has been added to the settings menu, allowing for an increase in storage capacity through data compression techniques.</li>
       <li>You can now expand the storage capacity for up to 98 achievement categories across the added games (please note that this may increase the resource load on your device). Be aware that this process will erase any previously added games and potentially your credits.</li>
