@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.09]
+-- proyecto: counter games xtree [v0.10]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.09"
+  app_ver = "v0.10"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -1978,7 +1978,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.09", 12, 7, 7)
+  print("counter games xtree v0.10", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -2845,7 +2845,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.09",
+    "version: v0.10",
     "",
     tr(37),
     "martstartiv",
@@ -2884,24 +2884,122 @@ function dibujar_ranita(x, y)
   if ranita_oculta == 1 then return end
   local off_y = flr(sin(ranita_anim / 60) * 1.5)
   local ry = y + off_y
-  rectfill(x, ry + 2, x + 10, ry + 10, 3)
-  rectfill(x + 1, ry + 3, x + 9, ry + 10, 11)
 
   if pet_tipo == 1 then
-    rectfill(x + 1, ry + 3, x + 9, ry + 10, 6)
-    pset(x + 1, ry + 1, 6) pset(x + 2, ry + 2, 14)
-    pset(x + 9, ry + 1, 6) pset(x + 8, ry + 2, 14)
-    if emocion_actual == 6 then
-      line(x + 2, ry + 5, x + 4, ry + 5, 0) line(x + 6, ry + 5, x + 8, ry + 5, 0)
-      if ranita_anim < 30 then print("z", x + 11, ry - 4, 7) end
-    elseif emocion_actual == 5 or emocion_actual == 8 then
-      rectfill(x + 1, ry + 4, x + 9, ry + 6, 0)
-    else
-      pset(x + 3, ry + 5, 11) pset(x + 7, ry + 5, 11)
+    local sent_lame = (emocion_actual == 2 or emocion_actual == 11 or emocion_actual == 17)
+    local sent_miau = (emocion_actual >= 13 and emocion_actual <= 16)
+    if sent_lame or sent_miau then
+      local lame = sent_lame and ((ranita_anim % 36) < 16)
+      local miau = sent_miau and ((ranita_anim % 40) < 14)
+      local cola_m = flr(sin(ranita_anim / 30) * 1.5)
+
+      -- Cuerpo sentado y colita moviendose
+      rectfill(x + 2, ry + 5, x + 8, ry + 10, 6)
+      line(x + 8, ry + 9, x + 10, ry + 7 + cola_m, 6)
+      pset(x + 10, ry + 6 + cola_m, 6)
+
+      -- Patitas delanteras blancas
+      pset(x + 3, ry + 10, 7)
+      if lame then
+        line(x + 6, ry + 8, x + 5, ry + 6, 7)
+      else
+        pset(x + 7, ry + 10, 7)
+      end
+
+      -- Cabeza y orejitas (se mueven levemente al maullar)
+      local oreja_y = miau and (ry + 1) or ry
+      rectfill(x + 2, ry + 1, x + 8, ry + 5, 6)
+      pset(x + 2, oreja_y - 1, 6) pset(x + 2, ry, 6) pset(x + 3, ry, 14)
+      pset(x + 8, oreja_y - 1, 6) pset(x + 8, ry, 6) pset(x + 7, ry, 14)
+
+      -- Bigotes blancos
+      pset(x + 1, ry + 3, 7) pset(x + 1, ry + 4, 7)
+      pset(x + 9, ry + 3, 7) pset(x + 9, ry + 4, 7)
+
+      -- Ojos ambar/cafe naturales con parpadeo suave
+      local parp = (not lame) and ((ranita_anim % 55) < 4)
+      if lame or parp then
+        line(x + 3, ry + 3, x + 4, ry + 3, 4)
+        line(x + 6, ry + 3, x + 7, ry + 3, 4)
+      else
+        pset(x + 4, ry + 3, 9) pset(x + 6, ry + 3, 9)
+      end
+
+      -- Nariz, lenguita o boquita maullando
+      pset(x + 5, ry + 4, 14)
+      if lame then
+        pset(x + 5, ry + 5, 8)
+      elseif miau then
+        rectfill(x + 4, ry + 5, x + 6, ry + 5, 8)
+      end
+      return
     end
-    pset(x + 5, ry + 7, 14)
-    if emocion_actual == 4 then line(x + 4, ry + 9, x + 6, ry + 9, 8) end
+
+    local dormido = (emocion_actual == 6)
+    local dir = (cos(ranita_anim / 60) >= 0) and 1 or -1
+    local cx = x + (dormido and 0 or flr(sin(ranita_anim / 60) * 3))
+    local paso = dormido and 0 or (flr(ranita_anim / 7) % 2)
+    local hx = (dir == 1) and (cx + 4) or cx
+    local bx = (dir == 1) and cx or (cx + 3)
+
+    -- Cola larga y curvada
+    local tx = (dir == 1) and bx or (bx + 7)
+    line(tx, ry + 6, tx - dir * 2, ry + 3, 6)
+    pset(tx - dir, ry + 2 + paso, 6)
+
+    -- Cuerpo esbelto y 4 patitas
+    rectfill(bx, ry + 6, bx + 7, ry + 8, 6)
+    pset(bx + 1, ry + 9 + paso, 6)
+    pset(bx + 3, ry + 10 - paso, 5)
+    pset(bx + 5, ry + 9 + paso, 6)
+    pset(bx + 7, ry + 10 - paso, 5)
+
+    -- Cabeza ancha con orejas puntiagudas
+    rectfill(hx, ry + 2, hx + 6, ry + 6, 6)
+    pset(hx, ry, 6) pset(hx, ry + 1, 6) pset(hx + 1, ry + 1, 14)
+    pset(hx + 6, ry, 6) pset(hx + 6, ry + 1, 6) pset(hx + 5, ry + 1, 14)
+
+    -- Bigotes blancos laterales
+    pset(hx - 1, ry + 4, 7) pset(hx - 1, ry + 5, 7)
+    pset(hx + 7, ry + 4, 7) pset(hx + 7, ry + 5, 7)
+
+    -- Corona real (emocion 7 o 12)
+    if emocion_actual == 7 or emocion_actual == 12 then
+      line(hx + 2, ry + 1, hx + 4, ry + 1, 10)
+      pset(hx + 2, ry, 10) pset(hx + 4, ry, 10)
+    end
+
+    -- Ojos ambar/cafe segun estado animico
+    if dormido then
+      line(hx + 1, ry + 4, hx + 2, ry + 4, 4)
+      line(hx + 4, ry + 4, hx + 5, ry + 4, 4)
+      if ranita_anim < 30 then print("z", hx + 7, ry - 3, 7) end
+    elseif emocion_actual == 5 or emocion_actual == 8 then
+      rectfill(hx + 1, ry + 3, hx + 5, ry + 4, 0)
+    elseif emocion_actual == 4 or emocion_actual == 9 then
+      pset(hx + 1, ry + 4, 4) pset(hx + 2, ry + 3, 4)
+      pset(hx + 4, ry + 3, 4) pset(hx + 5, ry + 4, 4)
+      pset(hx + 1, ry + 5, 14) pset(hx + 5, ry + 5, 14)
+      if ranita_anim < 35 then pset(hx + 3, ry - 2, 14) pset(hx + 2, ry - 3, 8) pset(hx + 4, ry - 3, 8) end
+    else
+      pset(hx + 2, ry + 4, 9) pset(hx + 4, ry + 4, 9)
+    end
+
+    -- Nariz rosada y lenguita relamiendose
+    pset(hx + 3, ry + 5, 14)
+    if not dormido and (ranita_anim % 28) < 10 then
+      pset(hx + 3, ry + 6, 8)
+      pset(hx + 3 + dir, ry + 6, 14)
+    end
+
+    -- Ovillo de lana jugando (emocion 3 o 10)
+    if emocion_actual == 3 or emocion_actual == 10 then
+      local ox = (dir == 1) and (hx + 7) or (hx - 3)
+      circfill(ox, ry + 9 - paso, 1, 12)
+      pset(ox - dir, ry + 10, 12)
+    end
     return
+
   elseif pet_tipo == 2 then
     rectfill(x + 1, ry + 2, x + 9, ry + 10, 4)
     rectfill(x, ry + 3, x + 1, ry + 7, 9)
@@ -2918,22 +3016,45 @@ function dibujar_ranita(x, y)
     end
     if emocion_actual == 4 then pset(x + 5, ry + 9, 8) end
     return
+
   elseif pet_tipo == 3 then
-    rectfill(x + 1, ry + 3, x + 9, ry + 8, 3)
-    rect(x + 2, ry + 4, x + 8, ry + 7, 11)
-    rectfill(x + 8, ry + 5, x + 11, ry + 8, 11)
-    rectfill(x + 2, ry + 9, x + 3, ry + 10, 11)
-    rectfill(x + 7, ry + 9, x + 8, ry + 10, 11)
-    if emocion_actual == 6 then
-      pset(x + 10, ry + 6, 0)
-      if ranita_anim < 30 then print("z", x + 11, ry - 4, 7) end
-    elseif emocion_actual == 5 or emocion_actual == 8 then
-      line(x + 9, ry + 5, x + 11, ry + 5, 0)
-    else
-      pset(x + 10, ry + 5, 7) pset(x + 10, ry + 6, 0)
+    local dormido = (emocion_actual == 6)
+    if dormido then
+      rectfill(x + 1, ry + 5, x + 9, ry + 9, 3)
+      rect(x + 2, ry + 6, x + 8, ry + 8, 11)
+      line(x + 1, ry + 9, x + 9, ry + 9, 4)
+      if ranita_anim < 30 then print("z", x + 10, ry - 1, 7) end
+      return
     end
+
+    local dir = (cos(ranita_anim / 60) >= 0) and 1 or -1
+    local tx = x + flr(sin(ranita_anim / 60) * 2)
+    local paso = flr(ranita_anim / 15) % 2
+    local estira = ((ranita_anim % 45) < 28) and 1 or 0
+
+    rectfill(tx + 2, ry + 8 + paso, tx + 3, ry + 10, 11)
+    rectfill(tx + 7, ry + 8 + (1 - paso), tx + 8, ry + 10, 11)
+    local cola_x = (dir == 1) and tx or (tx + 10)
+    pset(cola_x, ry + 7, 11)
+
+    rectfill(tx + 1, ry + 3, tx + 9, ry + 8, 3)
+    rect(tx + 2, ry + 4, tx + 8, ry + 7, 11)
+    line(tx + 1, ry + 8, tx + 9, ry + 8, 4)
+
+    local hx = (dir == 1) and (tx + 9 + estira) or (tx - 1 - estira)
+    rectfill(hx, ry + 5, hx + dir, ry + 7, 11)
+    if emocion_actual == 5 or emocion_actual == 8 then
+      pset(hx + dir, ry + 5, 0)
+    else
+      pset(hx + dir, ry + 5, 7)
+      pset(hx, ry + 5, 0)
+    end
+    if emocion_actual == 4 then pset(hx + dir, ry + 7, 8) end
     return
   end
+
+  rectfill(x, ry + 2, x + 10, ry + 10, 3)
+  rectfill(x + 1, ry + 3, x + 9, ry + 10, 11)
 
   if emocion_actual == 6 then
     line(x, ry + 2, x + 2, ry + 2, 0)
