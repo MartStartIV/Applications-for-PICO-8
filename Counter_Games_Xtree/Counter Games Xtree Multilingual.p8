@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.10]
+-- proyecto: counter games xtree [v0.11]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.10"
+  app_ver = "v0.11"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -215,6 +215,37 @@ function _init()
     if fila and fila[idx] then return fila[idx] end
     return ""
   end
+ 
+  shop_lang_raw = {
+    "tienda:|gorra|gafas|ojos oro|ranita oro|+3 emoc.|+20 logros|equipado!|comprado!|falta $:|elige juego|a:ok b:volver|sin memoria!",
+    "shop:|cap|shades|gold eyes|gold frog|+3 emotes|+20 slots|equipped!|purchased!|need $:|select game|a:buy b:back|low mem!",
+    "sklep:|czapka|okulary|zlote oczy|zlota zaba|+3 emocje|+20 slotow|zalozone!|kupiono!|brak $:|wybierz gre|a:ok b:wroc|brak pam.!",
+    "magazin:|kepka|ochki|zol. glaza|zol. zhaba|+3 emocii|+20 slotov|nadeto!|kupleno!|nuzhno $:|vybor igry|a:ok b:nazad|net pam.!",
+    "loja:|bone|oculos|olhos ouro|sapo ouro|+3 emocoes|+20 slots|equipado!|comprado!|falta $:|escolher jogo|a:ok b:voltar|sem mem.!",
+    "negozio:|cappello|occhiali|occhi oro|rana oro|+3 emozioni|+20 slot|equipagg.!|comprato!|serve $:|scegli gioco|a:ok b:ind.|mem. piena!",
+    "boutique:|casquette|lunettes|yeux or|gren. or|+3 emotes|+20 slots|equipe!|achete!|manque $:|choisir jeu|a:ok b:retour|mem. pleine!",
+    "shoppu:|boushi|megane|kin no me|kin kaeru|+3 kanjou|+20 waku|soubi!|kounyuu!|tarinai $:|geemu sentaku|a:ok b:modoru|memori fusoku!",
+    "shangdian:|maozi|yanjing|jin yan|jin wa|+3 biaoqing|+20 cao|yi zhuangbei!|yi goumai!|xuyao $:|xuanze youxi|a:ok b:fanhui|neicun man!",
+    "sangjeom:|moja|angyeong|geum nun|geum gaeguri|+3 gamjeong|+20 seullot|jangchak!|gumae!|bujok $:|geim seontaek|a:ok b:dwiro|memori bujok!",
+    "magaza:|sapka|gozluk|altin goz|altin kurb.|+3 duygu|+20 slot|takildi!|alindi!|gerek $:|oyun sec|a:ok b:geri|bellek dolu!",
+    "laden:|mutze|brille|goldaugen|goldfrosch|+3 gefuhle|+20 platze|ausgerustet!|gekauft!|fehlt $:|spiel wahlen|a:ok b:zuruck|speicher voll!",
+    "matjar:|qubaa|nazzara|uyun dhahab|difda dhahab|+3 mashair|+20 khana|mujahhaz!|mushtara!|yahtaj $:|ikhtar luba|a:ok b:ruju|dhakira mum.!",
+    "dukan:|topi|chashma|sunehri aankh|sunehri mendhak|+3 bhav|+20 jagah|lagaya!|kharida!|chahiye $:|khel chune|a:ok b:wapas|memori bhari!",
+    "winkel:|pet|bril|goudogen|goudkikker|+3 emoties|+20 vakken|uitgerust!|gekocht!|nodig $:|kies spel|a:ok b:terug|geheug. vol!",
+    "butik:|keps|glasogon|guldgon|guldgroda|+3 kanslor|+20 platser|utrustad!|kopt!|behover $:|valj spel|a:ok b:tillbaka|minne fullt!",
+    "toko:|topi|kacamata|mata emas|katak emas|+3 emosi|+20 slot|dipakai!|dibeli!|kurang $:|pilih game|a:ok b:kembali|memori penuh!",
+    "cua hang:|mu|kinh|mat vang|ech vang|+3 cam xuc|+20 o|da trang bi!|da mua!|thieu $:|chon game|a:ok b:quay lai|day bo nho!"
+  }
+  shop_lang = {}
+  for l = 1, 18 do
+    shop_lang[l] = dividir_pipe(shop_lang_raw[l])
+  end
+
+  function tr_shop(idx)
+    local fila = shop_lang[idioma]
+    if fila and fila[idx] then return fila[idx] end
+    return ""
+  end
   
   function cat_tr(cid)
   local fila = cats_lang[idioma]
@@ -394,6 +425,12 @@ function _init()
   juego_scroll = 0
   confirm_mem_abierta = false
   confirm_mem_cursor = 2
+  shop_cursor = 1
+  shop_scroll = 0
+  shop_own = {false, false, false, false, false}
+  shop_eq = {false, false, false, false}
+  shop_sel_juego = false
+  shop_j_cursor = 1
   ui_fx = 1
   menu_anim = 0
   inactivo_t = 0
@@ -556,14 +593,16 @@ function guardar_datos()
         local c = 1
         while c <= n_cats and slot <= 60 do
           local cid1 = min(max(g.cats[c] or 1, 1), 60)
-          local val1 = min(max(flr(g.vals[c] or 0), 0), 511)
+          local val1 = min(max(flr(g.vals[c] or 0), 0), 255)
           local ent_p = cid1 + (val1 * 64)
+
           local dec_p = 0
           if c + 1 <= n_cats then
             local cid2 = min(max(g.cats[c + 1] or 1, 1), 60)
-            local val2 = min(max(flr(g.vals[c + 1] or 0), 0), 511)
-            dec_p = (cid2 + (val2 * 64)) / 32768
+            local val2 = min(max(flr(g.vals[c + 1] or 0), 0), 255)
+            dec_p = (cid2 + (val2 * 64)) / 16384
           end
+
           dset(slot, ent_p + dec_p)
           slot = slot + 1
           c = c + 2
@@ -625,139 +664,35 @@ function guardar_datos()
     mult = mult * 2
   end
   local dec61 = (mem_ext * 4) + (pet_tipo * 16)
-  dset(61, 1000 + min(max(flr(monedas), 0), 999) + (dec61 / 64))
+  local s61 = 0
+  local m61 = 2048
+  for k = 1, 2 do
+    if shop_own[k] then s61 = s61 + m61 end
+    m61 = m61 * 2
+    if shop_eq[k] then s61 = s61 + m61 end
+    m61 = m61 * 2
+  end
+  dset(61, 1000 + min(max(flr(monedas), 0), 999) + s61 + (dec61 / 64))
   dset(62, flr(uso_frames) + (mask_exp / 256))
 
   local u_ent = 0
   local u_mult = 1
   for j = 1, 3 do
-    local uv = (ultimo_cat_inc[j] or 0) % 32
+    local uv = (ultimo_cat_inc[j] or 0) % 24
     u_ent = u_ent + (uv * u_mult)
-    u_mult = u_mult * 32
+    u_mult = u_mult * 24
   end
-  local u_dec = ((ultimo_cat_inc[4] or 0) % 32) / 32
-  dset(63, u_ent + u_dec)
-end
-
-function guardar_datos()
-  local cfg0 = 1000 + idioma + (tema_idx * 32) + (ui_estilo * 1024) + (modo_animo * 8192)
-  local sub0 = emocion_fija + (tema_auto_juego * 32) + (ranita_oculta * 64) + (ui_zoom * 128)
-  dset(0, cfg0 + (sub0 / 256))
-
-  local b_pack = 0
-  local b_mult = 1
-  for i = 1, 5 do
-    b_pack = b_pack + ((btn_cfg[i] or 0) * b_mult)
-    b_mult = b_mult * 8
+  local u4 = (ultimo_cat_inc[#ultimo_cat_inc] or 0) % 24
+  local s63 = 0
+  local m63 = 32
+  for k = 3, 4 do
+    if shop_own[k] then s63 = s63 + m63 end
+    m63 = m63 * 2
+    if shop_eq[k] then s63 = s63 + m63 end
+    m63 = m63 * 2
   end
-
-  local nu = nombre_usuario or "gamer"
-  dset(2, empaquetar_4ch(sub(nu, 1, 4)))
-  dset(3, empaquetar_4ch(sub(nu, 5, 8)))
-  dset(4, empaquetar_4ch(sub(nu, 9, 12)))
-
-  if mem_ext == 1 then
-    dset(1, b_pack + (ui_fx / 8))
-    local slot = 13
-    for j = 1, 8 do
-      local g = mis_juegos[j]
-      if g then
-        local n_cats = min(#g.cats, 20)
-        if g.id_juego and g.id_juego > 0 then
-          dset(4 + j, g.id_juego + (n_cats / 32))
-        else
-          dset(4 + j, -empaquetar_4ch(sub(g.nombre, 1, 4)))
-        end
-        if (not g.id_juego or g.id_juego == 0) and slot <= 59 then
-          dset(slot, n_cats)
-          slot = slot + 1
-          dset(slot, empaquetar_4ch(sub(g.nombre, 5, 8)))
-          slot = slot + 1
-        end
-        local c = 1
-        while c <= n_cats and slot <= 60 do
-          local cid1 = min(max(g.cats[c] or 1, 1), 60)
-          local val1 = min(max(flr(g.vals[c] or 0), 0), 511)
-          local ent_p = cid1 + (val1 * 64)
-          local dec_p = 0
-          if c + 1 <= n_cats then
-            local cid2 = min(max(g.cats[c + 1] or 1, 1), 60)
-            local val2 = min(max(flr(g.vals[c + 1] or 0), 0), 511)
-            dec_p = (cid2 + (val2 * 64)) / 32768
-          end
-          dset(slot, ent_p + dec_p)
-          slot = slot + 1
-          c = c + 2
-        end
-      else
-        dset(4 + j, 0)
-      end
-    end
-    while slot <= 60 do
-      dset(slot, 0)
-      slot = slot + 1
-    end
-  else
-    dset(1, b_pack + ((#mis_juegos + (ui_fx * 5)) / 32))
-    for j = 1, 4 do
-      local g = mis_juegos[j]
-      if g then
-        local n_cats = min(#g.cats, 20)
-        if g.id_juego and g.id_juego > 0 then
-          dset(4 + j, g.id_juego + (n_cats / 32))
-        else
-          dset(4 + j, -empaquetar_4ch(sub(g.nombre, 1, 4)))
-        end
-      else
-        dset(4 + j, 0)
-      end
-    end
-    local slot = 9
-    for j = 1, 4 do
-      local g = mis_juegos[j]
-      if g then
-        local n_cats = min(#g.cats, 20)
-        if (not g.id_juego or g.id_juego == 0) and slot <= 59 then
-          dset(slot, n_cats)
-          slot = slot + 1
-          dset(slot, empaquetar_4ch(sub(g.nombre, 5, 8)))
-          slot = slot + 1
-        end
-        for c = 1, n_cats do
-          if slot <= 60 then
-            local cid = min(max(g.cats[c] or 1, 1), 60)
-            local cval = min(max(flr(g.vals[c] or 0), 0), 32760)
-            dset(slot, cval + (cid / 64))
-            slot = slot + 1
-          end
-        end
-      end
-    end
-    while slot <= 60 do
-      dset(slot, 0)
-      slot = slot + 1
-    end
-  end
-
-  local mask_exp = 0
-  local mult = 1
-  for j = 1, 8 do
-    if juegos_exp[j] then mask_exp = mask_exp + mult end
-    mult = mult * 2
-  end
-  local dec61 = (mem_ext * 4) + (pet_tipo * 16)
-  dset(61, 1000 + min(max(flr(monedas), 0), 999) + (dec61 / 64))
-  dset(62, flr(uso_frames) + (mask_exp / 256))
-
-  local u_ent = 0
-  local u_mult = 1
-  for j = 1, 3 do
-    local uv = (ultimo_cat_inc[j] or 0) % 32
-    u_ent = u_ent + (uv * u_mult)
-    u_mult = u_mult * 32
-  end
-  local u_dec = ((ultimo_cat_inc[#ultimo_cat_inc] or 0) % 32) / 32
-  dset(63, u_ent + u_dec)
+  if shop_own[#shop_own] then s63 = s63 + 512 end
+  dset(63, u_ent + ((u4 + s63) / 16384))
 end
 
 -- =========================================================
@@ -780,7 +715,7 @@ function cargar_datos()
 
     local dec0 = flr((v0 - ent0) * 256 + 0.5)
     emocion_fija = dec0 % 32
-    if emocion_fija > 17 then emocion_fija = 0 end
+    if emocion_fija > 20 then emocion_fija = 0 end
     tema_auto_juego = flr(dec0 / 32) % 2
     ranita_oculta = flr(dec0 / 64) % 2
     ui_zoom = flr(dec0 / 128) % 2
@@ -797,13 +732,24 @@ function cargar_datos()
       end
     end
 
+    shop_own = {false, false, false, false, false}
+    shop_eq = {false, false, false, false}
+
     local v61 = dget(61) or 0
     local ent61 = flr(v61)
     local v62 = dget(62) or 0
     uso_frames = max(0, flr(v62))
     local mask_exp = 0
     if ent61 >= 1000 then
-      monedas = min(max(ent61 - 1000, 0), 999)
+      local b61 = ent61 - 1000
+      monedas = min(max(b61 % 2048, 0), 999)
+      local tmp61 = flr(b61 / 2048)
+      for k = 1, 2 do
+        shop_own[k] = (tmp61 % 2) == 1
+        tmp61 = flr(tmp61 / 2)
+        shop_eq[k] = (tmp61 % 2) == 1
+        tmp61 = flr(tmp61 / 2)
+      end
       local dec61 = flr((v61 - ent61) * 64 + 0.5)
       mem_ext = flr(dec61 / 4) % 2
       pet_tipo = flr(dec61 / 16) % 4
@@ -858,13 +804,15 @@ function cargar_datos()
             local sc = dget(slot) or 0
             slot = slot + 1
             local ent_p = flr(sc)
+            local dec_p = flr((sc - ent_p) * 16384 + 0.5)
+
             local cid1 = ent_p % 64
             local val1 = flr(ent_p / 64)
             if cid1 < 1 or cid1 > 60 then cid1 = c end
             add(g.cats, cid1)
             add(g.vals, max(0, val1))
+
             if c + 1 <= n_cats then
-              local dec_p = flr((sc - ent_p) * 32768 + 0.5)
               local cid2 = dec_p % 64
               local val2 = flr(dec_p / 64)
               if cid2 < 1 or cid2 > 60 then cid2 = c + 1 end
@@ -933,11 +881,21 @@ function cargar_datos()
 
     local v63 = dget(63) or 0
     local ent63 = flr(v63)
+    local dec63 = flr((v63 - ent63) * 16384 + 0.5)
+    local u4 = dec63 % 24
+    local tmp63 = flr(dec63 / 32)
+    for k = 3, 4 do
+      shop_own[k] = (tmp63 % 2) == 1
+      tmp63 = flr(tmp63 / 2)
+      shop_eq[k] = (tmp63 % 2) == 1
+      tmp63 = flr(tmp63 / 2)
+    end
+    shop_own[#shop_own] = (tmp63 % 2) == 1
     ultimo_cat_inc = {
-      ent63 % 32,
-      flr(ent63 / 32) % 32,
-      flr(ent63 / 1024) % 32,
-      flr((v63 - ent63) * 32 + 0.5) % 32,
+      ent63 % 24,
+      flr(ent63 / 24) % 24,
+      flr(ent63 / 576) % 24,
+      u4,
       0, 0, 0, 0
     }
     estado = 2
@@ -946,11 +904,14 @@ function cargar_datos()
     pet_tipo = 0
     uso_frames = 0
     mem_ext = 0
+    shop_own = {false, false, false, false, false}
+    shop_eq = {false, false, false, false}
     juegos_exp = {false, false, false, false, false, false, false, false}
     ultimo_cat_inc = {0, 0, 0, 0, 0, 0, 0, 0}
     estado = 0
   end
 end
+
 
 
 function borrar_todo_guardado()
@@ -976,6 +937,8 @@ function borrar_todo_guardado()
   ultimo_hora_inc = {"", "", "", "", "", "", "", ""}
   mem_ext = 0
   juego_scroll = 0
+  shop_own = {false, false, false, false, false}
+  shop_eq = {false, false, false, false}
   ui_fx = 1
   tema_auto_juego = 1
   btn_cfg = {4, 5, 1, 0, 2}
@@ -1038,7 +1001,8 @@ function _update()
     inactivo_t = min(inactivo_t + 1, 1000)
   end
 
-  if emocion_fija >= 1 and emocion_fija <= 17 then
+  local tope_em = (shop_own and shop_own[#shop_own]) and 20 or 17
+  if emocion_fija >= 1 and emocion_fija <= tope_em then
     emocion_actual = emocion_fija
   else
     if inactivo_t >= 390 then
@@ -1051,25 +1015,18 @@ function _update()
       crono_emocion = crono_emocion + 1
       if crono_emocion >= 450 then
         crono_emocion = 0
-        local nueva_e = 1 + flr(rnd(17))
+        local nueva_e = 1 + flr(rnd(tope_em))
         if nueva_e == 6 then nueva_e = 1 + flr(rnd(5)) end
         emocion_actual = nueva_e
       end
     end
   end
 
-  local h = flr(tonum(stat(93)) or 0)
-  local m = flr(tonum(stat(94)) or 0)
-  local s = flr(tonum(stat(95)) or 0)
-  local sh = tostr(h) if #sh < 2 then sh = "0" .. sh end
-  local sm = tostr(m) if #sm < 2 then sm = "0" .. sm end
-  local ss = tostr(s) if #ss < 2 then ss = "0" .. ss end
-  reloj_str = sh .. ":" .. sm .. ":" .. ss
-
   if boot_ok and ranita_oculta == 0 then
     uso_frames = uso_frames + 1
     if uso_frames % 1800 == 0 then
-      dset(62, uso_frames)
+      local dec62 = (dget(62) or 0) - flr(dget(62) or 0)
+      dset(62, flr(uso_frames) + dec62)
     end
     if uso_frames >= 9000 then
       uso_frames = 0
@@ -1080,7 +1037,7 @@ function _update()
     end
   end
 
-  if btn(5) and btnp(0) and estado >= 2 and estado != 7 then
+  if btn(5) and btnp(0) and estado >= 2 and estado != 7 and estado != 8 then
     creditos_y = 128
     cambiar_estado(7)
     return
@@ -1104,6 +1061,8 @@ function _update()
     end
   elseif estado == 1 then
     actualizar_teclado_nombre()
+  elseif estado == 2 then
+    actualizar_menu_principal()
     if modo_animo == 1 then
       animo_timer = animo_timer + 1
       if animo_timer > 320 then
@@ -1115,16 +1074,6 @@ function _update()
           emocion_actual = em_pos[1 + flr(rnd(#em_pos))]
           crono_emocion = 0
         end
-      end
-    end
-  elseif estado == 2 then
-    actualizar_menu_principal()
-    if modo_animo == 1 then
-      animo_timer = animo_timer + 1
-      if animo_timer > 320 then
-        animo_timer = 0
-        mostrar_aviso(frases_animo[idioma] or "nice!", 75)
-        if emocion_fija == 0 then emocion_actual = 4 crono_emocion = 0 end
       end
     end
   elseif estado == 3 then
@@ -1142,8 +1091,11 @@ function _update()
     if creditos_y < -230 or btnp(4) or btnp(5) then
       cambiar_estado(estado_prev or 2)
     end
+  elseif estado == 8 then
+    actualizar_tienda()
   end
 end
+
 -- =========================================================
 -- parte 3b: menu principal y teclado virtual
 -- =========================================================
@@ -1656,7 +1608,7 @@ function actualizar_categorias_juego()
     local b_restar = btn_cfg[k2] or 5
 
     if btnp(b_sumar) then
-      local tope_v = (mem_ext == 1) and 511 or 32760
+      local tope_v = (mem_ext == 1) and 255 or 32760
       g.vals[cat_cursor] = min((g.vals[cat_cursor] or 0) + 1, tope_v)
       ultimo_cat_inc[juego_activo] = cat_cursor
       ultimo_hora_inc[juego_activo] = sub(reloj_str, 1, 5)
@@ -1742,7 +1694,7 @@ function actualizar_opciones()
     return
   end
 
-  local max_opt = 14
+  local max_opt = 15
   if btnp(2) then
     opt_cursor = opt_cursor - 1
     if opt_cursor < 1 then opt_cursor = max_opt end
@@ -1768,6 +1720,7 @@ function actualizar_opciones()
   local izq = btnp(0)
   local der = btnp(1)
   local acc = btnp(4)
+  local mod_em = (shop_own and shop_own[#shop_own]) and 21 or 18
 
   if opt_cursor == 1 then
     if izq then idioma = (idioma - 2) % 18 + 1 end
@@ -1791,30 +1744,37 @@ function actualizar_opciones()
       if modo_animo == 1 then animo_timer = 290 end
     end
   elseif opt_cursor == 8 then
-    if izq then emocion_fija = (emocion_fija - 1) % 18 end
-    if der or acc then emocion_fija = (emocion_fija + 1) % 18 end
+    if izq then emocion_fija = (emocion_fija - 1) % mod_em end
+    if der or acc then emocion_fija = (emocion_fija + 1) % mod_em end
   elseif opt_cursor == 9 then
     if izq or der or acc then ranita_oculta = (ranita_oculta == 0) and 1 or 0 end
   elseif opt_cursor == 10 then
     if izq then pet_tipo = (pet_tipo - 1) % 4 end
     if der or acc then pet_tipo = (pet_tipo + 1) % 4 end
   elseif opt_cursor == 11 then
+    if acc or der then
+      shop_cursor = 1
+      shop_scroll = 0
+      shop_sel_juego = false
+      cambiar_estado(8)
+    end
+  elseif opt_cursor == 12 then
     if izq or der or acc then
       confirm_mem_abierta = true
       confirm_mem_cursor = 2
     end
-  elseif opt_cursor == 12 then
+  elseif opt_cursor == 13 then
     if acc or der then
       sub_btn_abierta = true
       sub_btn_cursor = 1
       modal_anim = 6
     end
-  elseif opt_cursor == 13 then
+  elseif opt_cursor == 14 then
     if acc or der then
       creditos_y = 128
       cambiar_estado(7)
     end
-  elseif opt_cursor == 14 then
+  elseif opt_cursor == 15 then
     if acc or der then
       confirm_reset_abierta = true
       confirm_reset_cursor = 2
@@ -1952,6 +1912,8 @@ function _draw()
     dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
   elseif estado == 7 then
     dibujar_acercade()
+  elseif estado == 8 then
+    dibujar_tienda(c_bg, c_pan, c_txt, c_acc, c_atxt)
   end
 
   dibujar_borde_led()
@@ -1978,7 +1940,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.10", 12, 7, 7)
+  print("counter games xtree v0.11", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -2736,34 +2698,55 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
   local estilos_nom = {"#1", "#2", "#3", "#4", "#5", "#6", "#7"}
   local fx_nom = {"off", "slide", "spring", "pulse", "wave"}
   local pets_nom = {"frog", "cat", "dog", "turtle"}
-  local items = {
-    {tr(1), "<" .. cod_lang[idioma] .. ">"},
-    {tr(12), estilos_nom[ui_estilo]},
-    {tr_ext(1), fx_nom[ui_fx + 1]},
-    {tr(13), nombres_temas[tema_idx]},
-    {tr(14), tema_auto_juego == 1 and "on" or "off"},
-    {tr(15), ui_zoom == 1 and "on" or "off"},
-    {tr(16), modo_animo == 1 and "on" or "off"},
-    {tr(17), emocion_fija == 0 and "auto" or ("#" .. emocion_fija)},
-    {"pet " .. tr(17), ranita_oculta == 0 and "on" or "off"},
-    {tr_ext(2), pets_nom[(pet_tipo or 0) + 1] or "frog"},
-    {tr_ext(3), mem_ext == 1 and "on" or "off"},
-    {tr(18), "[cfg]"},
-    {tr(11), "[>]"},
-    {lbl_reset[idioma] or "reset all:", "[!]"}
+
+  local opt_lbl = {
+    tr(1),
+    tr(12),
+    tr_ext(1),
+    tr(13),
+    tr(14),
+    tr(15),
+    tr(16),
+    tr(17),
+    "pet " .. tr(17),
+    tr_ext(2),
+    tr_shop(1) .. " ($" .. monedas .. ")",
+    tr_ext(3),
+    tr(18),
+    tr(11),
+    lbl_reset[idioma] or "reset all:"
+  }
+
+  local opt_val = {
+    "<" .. cod_lang[idioma] .. ">",
+    estilos_nom[ui_estilo] or "#1",
+    fx_nom[(ui_fx or 0) + 1] or "off",
+    nombres_temas[tema_idx] or "cyber",
+    tema_auto_juego == 1 and "on" or "off",
+    ui_zoom == 1 and "on" or "off",
+    modo_animo == 1 and "on" or "off",
+    emocion_fija == 0 and "auto" or ("#" .. emocion_fija),
+    ranita_oculta == 0 and "on" or "off",
+    pets_nom[(pet_tipo or 0) + 1] or "frog",
+    "[>]",
+    mem_ext == 1 and "on" or "off",
+    "[cfg]",
+    "[>]",
+    "[!]"
   }
 
   for slot = 1, 5 do
     local idx = opt_scroll + slot
-    if idx <= #items then
+    if idx <= #opt_lbl then
       local ly = 20 + (slot - 1) * 17
       local sel = (opt_cursor == idx)
       local dx, _, pd = calc_fx(sel, idx)
-      local bg_col = sel and (idx == 14 and 8 or c_acc) or c_pan
+      local bg_col = sel and (idx == 15 and 8 or c_acc) or c_pan
       rectfill(5 + dx - pd, ly, 122 + dx + pd, ly + 13, bg_col)
-      print((sel and "> " or "  ") .. items[idx][1], 8 + dx, ly + 4, sel and 7 or (idx == 14 and 8 or c_txt))
-      local val_s = items[idx][2]
-      print(val_s, 119 + dx - #val_s * 4, ly + 4, sel and 7 or (idx == 14 and 8 or 11))
+      local lbl_s = opt_lbl[idx] or ""
+      local val_s = opt_val[idx] or ""
+      print((sel and "> " or "  ") .. lbl_s, 8 + dx, ly + 4, sel and 7 or (idx == 15 and 8 or c_txt))
+      print(val_s, 119 + dx - #val_s * 4, ly + 4, sel and 7 or (idx == 15 and 8 or 11))
     end
   end
 
@@ -2804,9 +2787,10 @@ function dibujar_opciones(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act)
     rectfill(20, 75, 56, 86, s_si and 8 or 1)
     print(tr(8), 32, 78, s_si and 7 or 5)
     rectfill(70, 75, 106, 86, s_no and 11 or 1)
-    print(tr(9), 82, 78, s_no and 0 or 5)
+    print(tr(9), 82, 78, s_no and 7 or 5)
   end
 end
+
 
 function dibujar_subventana_botones(c_pan, c_txt, c_acc, c_atxt)
   rectfill(8, 12, 119, 115, 0)
@@ -2845,7 +2829,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.10",
+    "version: v0.11",
     "",
     tr(37),
     "martstartiv",
@@ -2880,6 +2864,216 @@ function dibujar_acercade()
   dibujar_ranita(112, 112)
 end
 
+function actualizar_tienda()
+  if shop_sel_juego then
+    if btnp(5) then
+      shop_sel_juego = false
+      return
+    end
+    if #mis_juegos == 0 then
+      shop_sel_juego = false
+      return
+    end
+    if btnp(2) then
+      shop_j_cursor = shop_j_cursor - 1
+      if shop_j_cursor < 1 then shop_j_cursor = #mis_juegos end
+      menu_anim = -10
+    elseif btnp(3) then
+      shop_j_cursor = shop_j_cursor + 1
+      if shop_j_cursor > #mis_juegos then shop_j_cursor = 1 end
+      menu_anim = 10
+    elseif btnp(4) then
+      if juegos_exp[shop_j_cursor] then
+        mostrar_aviso("ok (+20)!", 30)
+      elseif monedas < 12 then
+        mostrar_aviso(tr_shop(10) .. "12$", 35)
+      else
+        local cats_lib, _, _ = calc_mem_libre()
+        if cats_lib < 8 then
+          mostrar_aviso(tr_shop(13), 35)
+        else
+          monedas = monedas - 12
+          juegos_exp[shop_j_cursor] = true
+          guardar_datos()
+          mostrar_aviso("#" .. shop_j_cursor .. " +20!", 45)
+          shop_sel_juego = false
+        end
+      end
+    end
+    return
+  end
+
+  if btnp(5) then
+    guardar_datos()
+    cambiar_estado(6)
+    return
+  end
+
+  if btnp(2) then
+    shop_cursor = shop_cursor - 1
+    if shop_cursor < 1 then shop_cursor = 6 end
+    menu_anim = -10
+  elseif btnp(3) then
+    shop_cursor = shop_cursor + 1
+    if shop_cursor > 6 then shop_cursor = 1 end
+    menu_anim = 10
+  end
+
+  if shop_cursor <= shop_scroll then
+    shop_scroll = shop_cursor - 1
+  elseif shop_cursor > shop_scroll + 4 then
+    shop_scroll = shop_cursor - 4
+  end
+
+  if btnp(4) then
+    local precios = {8, 10, 6, 15, 12, 12}
+    if shop_cursor <= 4 then
+      if shop_own[shop_cursor] then
+        shop_eq[shop_cursor] = not shop_eq[shop_cursor]
+        guardar_datos()
+        mostrar_aviso(shop_eq[shop_cursor] and tr_shop(8) or "off", 30)
+      elseif monedas >= precios[shop_cursor] then
+        monedas = monedas - precios[shop_cursor]
+        shop_own[shop_cursor] = true
+        shop_eq[shop_cursor] = true
+        guardar_datos()
+        mostrar_aviso(tr_shop(9), 35)
+      else
+        mostrar_aviso(tr_shop(10) .. precios[shop_cursor] .. "$", 35)
+      end
+    elseif shop_cursor == 5 then
+      if shop_own[#shop_own] then
+        mostrar_aviso("ok (#18-20)!", 30)
+      elseif monedas >= 12 then
+        monedas = monedas - 12
+        shop_own[#shop_own] = true
+        guardar_datos()
+        mostrar_aviso(tr_shop(9), 40)
+      else
+        mostrar_aviso(tr_shop(10) .. "12$", 35)
+      end
+    else
+      if #mis_juegos == 0 then
+        mostrar_aviso(tr(4), 35)
+      else
+        shop_sel_juego = true
+        shop_j_cursor = 1
+      end
+    end
+  end
+end
+
+
+function dibujar_tienda(c_bg, c_pan, c_txt, c_acc, c_atxt)
+  cls(c_bg)
+  rectfill(0, 0, 127, 14, c_pan)
+  line(0, 14, 127, 14, c_acc)
+  print(sub(tr_shop(1), 1, 14), 6, 4, 7)
+  print("$" .. monedas, 96, 4, 10)
+
+  local shop_nom = {
+    tr_shop(2),
+    tr_shop(3),
+    tr_shop(4),
+    tr_shop(5),
+    tr_shop(6),
+    tr_shop(7)
+  }
+  local shop_prc = {8, 10, 6, 15, 12, 12}
+
+  for slot = 1, 4 do
+    local idx = shop_scroll + slot
+    if idx <= 6 then
+      local ly = 20 + (slot - 1) * 19
+      local sel = (not shop_sel_juego) and (shop_cursor == idx)
+      local dx, _, pd = calc_fx(sel, idx)
+      local x1 = 5 + dx - pd
+      local x2 = 122 + dx + pd
+      local owned = (idx <= 4 and shop_own[idx]) or (idx == 5 and shop_own[#shop_own])
+
+      if ui_estilo == 2 then
+        rectfill(x1, ly, x2, ly + 15, sel and c_acc or c_pan)
+        rect(x1, ly, x2, ly + 15, sel and 7 or c_acc)
+      elseif ui_estilo == 3 then
+        rectfill(x1 + 2, ly, x2 - 2, ly + 15, sel and c_acc or c_pan)
+        rect(x1 + 1, ly, x2 - 1, ly + 15, sel and 7 or c_acc)
+      elseif ui_estilo == 4 then
+        rectfill(x1, ly, x2, ly + 15, sel and c_acc or 0)
+        rect(x1, ly, x2, ly + 15, c_acc)
+      elseif ui_estilo == 5 or ui_estilo == 6 then
+        rectfill(x1, ly, x2, ly + 15, sel and c_acc or c_pan)
+        rectfill(x1, ly, x1 + 2, ly + 15, sel and 7 or (owned and 11 or c_acc))
+      elseif ui_estilo == 7 then
+        rectfill(x1, ly, x2, ly + 15, sel and c_pan or 0)
+        rect(x1, ly, x2, ly + 15, sel and 7 or c_acc)
+        rect(x1 + 2, ly + 2, x2 - 2, ly + 13, sel and c_acc or c_pan)
+      else
+        rectfill(x1, ly, x2, ly + 15, sel and c_acc or c_pan)
+      end
+
+      local col_t = sel and ((ui_estilo == 7) and 7 or c_atxt) or c_txt
+      local est_s = (shop_prc[idx] or 0) .. "$"
+      if idx <= 4 and shop_own[idx] then
+        est_s = shop_eq[idx] and "[on]" or "[off]"
+      elseif idx == 5 and shop_own[#shop_own] then
+        est_s = "[ok]"
+      end
+
+      if ui_zoom == 1 then
+        local nom_m = texto_marquee(shop_nom[idx] or "", 8, sel)
+        print("\^w" .. nom_m, 9 + dx, ly + 5, col_t)
+        print(est_s, 119 + dx - #est_s * 4, ly + 5, sel and col_t or (owned and 11 or 10))
+      else
+        local pref = (ui_estilo == 4) and ("#" .. idx .. " ") or (sel and "> " or "  ")
+        local nom_m = texto_marquee(shop_nom[idx] or "", 14, sel)
+        print(pref .. nom_m, 8 + dx, ly + 5, col_t)
+        print(est_s, 119 + dx - #est_s * 4, ly + 5, sel and col_t or (owned and 11 or 10))
+      end
+    end
+  end
+
+  rectfill(0, 102, 127, 127, 0)
+  line(0, 102, 127, 102, c_acc)
+  print(sub(tr_shop(12), 1, 21), 6, 114, 6)
+
+  local prev_pet = pet_tipo
+  local prev_vis = ranita_oculta
+  pet_tipo = 0
+  ranita_oculta = 0
+  dibujar_ranita(110, 108)
+  pet_tipo = prev_pet
+  ranita_oculta = prev_vis
+
+  if shop_sel_juego then
+    rectfill(10, 22, 117, 99, 0)
+    rect(10, 22, 117, 99, c_acc)
+    rectfill(12, 24, 115, 34, c_acc)
+    print(sub(tr_shop(11), 1, 18), 16, 26, c_atxt)
+    local j_off = max(0, shop_j_cursor - 4)
+    for slot = 1, 4 do
+      local j = j_off + slot
+      if j <= #mis_juegos then
+        local jy = 38 + (slot - 1) * 14
+        local sel_j = (shop_j_cursor == j)
+        local dx, _, pd = calc_fx(sel_j, j)
+        rectfill(14 + dx - pd, jy, 113 + dx + pd, jy + 12, sel_j and c_acc or c_pan)
+        if ui_estilo == 2 or ui_estilo == 4 or ui_estilo == 7 then
+          rect(14 + dx - pd, jy, 113 + dx + pd, jy + 12, sel_j and 7 or c_acc)
+        end
+        local tag_e = juegos_exp[j] and "[+20]" or "[12$]"
+        if ui_zoom == 1 then
+          local nom_j = texto_marquee(mis_juegos[j].nombre, 7, sel_j)
+          print("\^w" .. nom_j, 17 + dx, jy + 3, sel_j and c_atxt or c_txt)
+        else
+          local nom_j = texto_marquee(mis_juegos[j].nombre, 12, sel_j)
+          print(nom_j, 17 + dx, jy + 3, sel_j and c_atxt or c_txt)
+        end
+        print(tag_e, 111 + dx - #tag_e * 4, jy + 3, sel_j and c_atxt or (juegos_exp[j] and 11 or 10))
+      end
+    end
+  end
+end
+
 function dibujar_ranita(x, y)
   if ranita_oculta == 1 then return end
   local off_y = flr(sin(ranita_anim / 60) * 1.5)
@@ -2893,12 +3087,10 @@ function dibujar_ranita(x, y)
       local miau = sent_miau and ((ranita_anim % 40) < 14)
       local cola_m = flr(sin(ranita_anim / 30) * 1.5)
 
-      -- Cuerpo sentado y colita moviendose
       rectfill(x + 2, ry + 5, x + 8, ry + 10, 6)
       line(x + 8, ry + 9, x + 10, ry + 7 + cola_m, 6)
       pset(x + 10, ry + 6 + cola_m, 6)
 
-      -- Patitas delanteras blancas
       pset(x + 3, ry + 10, 7)
       if lame then
         line(x + 6, ry + 8, x + 5, ry + 6, 7)
@@ -2906,17 +3098,14 @@ function dibujar_ranita(x, y)
         pset(x + 7, ry + 10, 7)
       end
 
-      -- Cabeza y orejitas (se mueven levemente al maullar)
       local oreja_y = miau and (ry + 1) or ry
       rectfill(x + 2, ry + 1, x + 8, ry + 5, 6)
       pset(x + 2, oreja_y - 1, 6) pset(x + 2, ry, 6) pset(x + 3, ry, 14)
       pset(x + 8, oreja_y - 1, 6) pset(x + 8, ry, 6) pset(x + 7, ry, 14)
 
-      -- Bigotes blancos
       pset(x + 1, ry + 3, 7) pset(x + 1, ry + 4, 7)
       pset(x + 9, ry + 3, 7) pset(x + 9, ry + 4, 7)
 
-      -- Ojos ambar/cafe naturales con parpadeo suave
       local parp = (not lame) and ((ranita_anim % 55) < 4)
       if lame or parp then
         line(x + 3, ry + 3, x + 4, ry + 3, 4)
@@ -2925,7 +3114,6 @@ function dibujar_ranita(x, y)
         pset(x + 4, ry + 3, 9) pset(x + 6, ry + 3, 9)
       end
 
-      -- Nariz, lenguita o boquita maullando
       pset(x + 5, ry + 4, 14)
       if lame then
         pset(x + 5, ry + 5, 8)
@@ -2942,34 +3130,28 @@ function dibujar_ranita(x, y)
     local hx = (dir == 1) and (cx + 4) or cx
     local bx = (dir == 1) and cx or (cx + 3)
 
-    -- Cola larga y curvada
     local tx = (dir == 1) and bx or (bx + 7)
     line(tx, ry + 6, tx - dir * 2, ry + 3, 6)
     pset(tx - dir, ry + 2 + paso, 6)
 
-    -- Cuerpo esbelto y 4 patitas
     rectfill(bx, ry + 6, bx + 7, ry + 8, 6)
     pset(bx + 1, ry + 9 + paso, 6)
     pset(bx + 3, ry + 10 - paso, 5)
     pset(bx + 5, ry + 9 + paso, 6)
     pset(bx + 7, ry + 10 - paso, 5)
 
-    -- Cabeza ancha con orejas puntiagudas
     rectfill(hx, ry + 2, hx + 6, ry + 6, 6)
     pset(hx, ry, 6) pset(hx, ry + 1, 6) pset(hx + 1, ry + 1, 14)
     pset(hx + 6, ry, 6) pset(hx + 6, ry + 1, 6) pset(hx + 5, ry + 1, 14)
 
-    -- Bigotes blancos laterales
     pset(hx - 1, ry + 4, 7) pset(hx - 1, ry + 5, 7)
     pset(hx + 7, ry + 4, 7) pset(hx + 7, ry + 5, 7)
 
-    -- Corona real (emocion 7 o 12)
     if emocion_actual == 7 or emocion_actual == 12 then
       line(hx + 2, ry + 1, hx + 4, ry + 1, 10)
       pset(hx + 2, ry, 10) pset(hx + 4, ry, 10)
     end
 
-    -- Ojos ambar/cafe segun estado animico
     if dormido then
       line(hx + 1, ry + 4, hx + 2, ry + 4, 4)
       line(hx + 4, ry + 4, hx + 5, ry + 4, 4)
@@ -2985,14 +3167,12 @@ function dibujar_ranita(x, y)
       pset(hx + 2, ry + 4, 9) pset(hx + 4, ry + 4, 9)
     end
 
-    -- Nariz rosada y lenguita relamiendose
     pset(hx + 3, ry + 5, 14)
     if not dormido and (ranita_anim % 28) < 10 then
       pset(hx + 3, ry + 6, 8)
       pset(hx + 3 + dir, ry + 6, 14)
     end
 
-    -- Ovillo de lana jugando (emocion 3 o 10)
     if emocion_actual == 3 or emocion_actual == 10 then
       local ox = (dir == 1) and (hx + 7) or (hx - 3)
       circfill(ox, ry + 9 - paso, 1, 12)
@@ -3052,9 +3232,21 @@ function dibujar_ranita(x, y)
     if emocion_actual == 4 then pset(hx + dir, ry + 7, 8) end
     return
   end
+  local eq_ojos = false
+  local eq_skin = false
+  if shop_eq then
+    for k = 1, 4 do
+      if k == 3 and shop_eq[k] then eq_ojos = true end
+      if k == 4 and shop_eq[k] then eq_skin = true end
+    end
+  end
 
-  rectfill(x, ry + 2, x + 10, ry + 10, 3)
-  rectfill(x + 1, ry + 3, x + 9, ry + 10, 11)
+  local col_c1 = eq_skin and 9 or 3
+  local col_c2 = eq_skin and 10 or 11
+  local col_ojo = eq_ojos and 10 or 0
+
+  rectfill(x, ry + 2, x + 10, ry + 10, col_c1)
+  rectfill(x + 1, ry + 3, x + 9, ry + 10, col_c2)
 
   if emocion_actual == 6 then
     line(x, ry + 2, x + 2, ry + 2, 0)
@@ -3062,12 +3254,12 @@ function dibujar_ranita(x, y)
     pset(x + 5, ry + 7, 8)
     if ranita_anim < 30 then print("z", x + 11, ry - 4, 7) end
   else
-    rectfill(x, ry, x + 2, ry + 2, 3)
-    rectfill(x + 8, ry, x + 10, ry + 2, 3)
+    rectfill(x, ry, x + 2, ry + 2, col_c1)
+    rectfill(x + 8, ry, x + 10, ry + 2, col_c1)
     rectfill(x + 1, ry + 1, x + 2, ry + 2, 7)
     rectfill(x + 8, ry + 1, x + 9, ry + 2, 7)
-    pset(x + 1, ry + 2, 0)
-    pset(x + 9, ry + 2, 0)
+    pset(x + 1, ry + 2, col_ojo)
+    pset(x + 9, ry + 2, col_ojo)
 
     if emocion_actual == 1 then
       rectfill(x + 3, ry + 7, x + 7, ry + 7, 8)
@@ -3126,9 +3318,37 @@ function dibujar_ranita(x, y)
       rectfill(x + 2, ry - 1, x + 8, ry + 1, 7)
       rectfill(x + 1, ry - 3, x + 9, ry - 1, 7)
       pset(x + 3, ry + 7, 8) rectfill(x + 4, ry + 8, x + 6, ry + 8, 8) pset(x + 7, ry + 7, 8)
+    elseif emocion_actual == 18 then
+      circ(x + 5, ry + 5, 7, 12)
+      rectfill(x + 4, ry + 7, x + 6, ry + 8, 8)
+    elseif emocion_actual == 19 then
+      local c_rgb = (ranita_anim < 20) and 8 or ((ranita_anim < 40) and 11 or 12)
+      line(x + 1, ry - 1, x + 9, ry - 1, c_rgb)
+      rectfill(x - 1, ry + 2, x, ry + 5, c_rgb)
+      rectfill(x + 10, ry + 2, x + 11, ry + 5, c_rgb)
+      rectfill(x + 4, ry + 8, x + 6, ry + 8, 8)
+    elseif emocion_actual == 20 then
+      line(x + 2, ry - 1, x + 3, ry - 3, 10)
+      line(x + 5, ry - 1, x + 5, ry - 4, 9)
+      line(x + 8, ry - 1, x + 7, ry - 3, 10)
+      rectfill(x + 3, ry + 7, x + 7, ry + 8, 8)
     else
       line(x + 3, ry - 2, x + 7, ry - 2, 10)
       pset(x + 3, ry + 7, 8) rectfill(x + 4, ry + 8, x + 6, ry + 8, 8) pset(x + 7, ry + 7, 8)
+    end
+  end
+
+  if shop_eq then
+    for k = 1, 2 do
+      if shop_eq[k] then
+        if k == 1 then
+          rectfill(x + 1, ry - 2, x + 9, ry, 8)
+          line(x + 1, ry, x + 11, ry, 7)
+        else
+          rectfill(x, ry + 1, x + 10, ry + 3, 1)
+          line(x + 1, ry + 2, x + 9, ry + 2, 12)
+        end
+      end
     end
   end
 end
