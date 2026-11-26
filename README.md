@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.10</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.11</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -188,7 +188,16 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.27 (Counter Games Xtree V0.10) - current version</h4>
+    <h4>Version 0.28 (Counter Games Xtree V0.11) - current version</h4>
+    <ul>
+      <li>A mini-shop has been added, allowing you to purchase accessories for the little frog, along with other extras, at the stated costs.</li>
+      <li>Themes and effects have been integrated into the new shop.</li>
+      <li>A critical memory overflow error related to additional storage has been fixed.</li>
+      <li>Due to technical limitations regarding `csdata` file storage, the total number of categories has been capped at 96. You can have up to 4 save slots with 20 categories each (with the "extra" feature enabled), plus a 5th slot with up to 16 categories.</li>
+      <li>All 4 save slots, in their standard configuration of 12 categories each, are functioning properly.</li>
+      <li>Several bugs have been fixed.</li>
+    </ul>
+    <h4>Version 0.27 (Counter Games Xtree V0.10)</h4>
     <ul>
       <li>Improvements have been added for the kitten and turtle pets :)</li>
       <li>Some minor improvements have been applied.</li>
