@@ -168,6 +168,7 @@
     <li><strong>Game & Objective Tracking:</strong> Create entries for specific games and organize custom achievement categories inside each title, with the flexibility to add more objectives anytime.</li>
     <li><strong>Interactive LED Confirmation System:</strong> Visual LED indicators light up when you complete an objective and confirm it with the action button (fully remappable to your preference).</li>
     <li><strong>Dynamic UI Layouts & Auto-Themes:</strong> Choose between at least 4 distinct interface designs, switch color presets, or activate <strong>Auto-Theme</strong> to automatically adapt the color scheme to the selected game.</li>
+    <li><strong>Mini shop:</strong> You can now purchase add-ons for your frog pet, along with various other extras.</li> 
     <li><strong>Comprehensive Options Menu:</strong> Includes <strong>Zoom-UI</strong> for scaling the graphical interface, periodic motivational messages, frog mascot mood selector, button visualizer and remapping, and a full data wipe option.</li>
   </ul>
 
