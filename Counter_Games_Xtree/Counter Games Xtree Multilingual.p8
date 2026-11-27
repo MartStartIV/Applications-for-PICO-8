@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.11]
+-- proyecto: counter games xtree [v0.12]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.11"
+  app_ver = "v0.12"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -1293,6 +1293,8 @@ function filtrar_juegos_db()
 end
 
 function actualizar_buscador_juegos()
+  local max_j = (mem_ext == 1) and 8 or 4
+
   if btnp(5) then
     if busq_foco == 2 then
       busq_foco = 1
@@ -1309,7 +1311,7 @@ function actualizar_buscador_juegos()
     local tecla = mover_cursor_teclado()
     if btnp(4) then
       if tecla == "esp" then
-        if #busq_texto < 16 then busq_texto = busq_texto .. " " end
+        if #busq_texto < 12 then busq_texto = busq_texto .. " " end
         filtrar_juegos_db()
       elseif tecla == "bor" then
         if #busq_texto > 0 then
@@ -1323,7 +1325,7 @@ function actualizar_buscador_juegos()
         busq_foco = 2
         busq_cursor = (#busq_resultados > 0) and 1 or 0
       else
-        if #busq_texto < 16 then
+        if #busq_texto < 12 then
           busq_texto = busq_texto .. tecla
           filtrar_juegos_db()
         end
@@ -1331,43 +1333,42 @@ function actualizar_buscador_juegos()
     end
   else
     local tot_r = #busq_resultados
-    local tiene_custom = (#limpiar_espacios_der(busq_texto) > 0)
-    local max_c = tot_r + (tiene_custom and 1 or 0)
-
     if btnp(2) then
       busq_cursor = busq_cursor - 1
-      if busq_cursor < 0 then busq_cursor = max_c end
+      if busq_cursor < 0 then busq_cursor = tot_r end
     elseif btnp(3) then
       busq_cursor = busq_cursor + 1
-      if busq_cursor > max_c then busq_cursor = 0 end
+      if busq_cursor > tot_r then busq_cursor = 0 end
     elseif btnp(4) then
       if busq_cursor == 0 then
         busq_foco = 1
-      elseif busq_cursor <= tot_r then
-        local id_elegido = busq_resultados[busq_cursor]
-        if id_elegido then
-          local ya_esta = false
-          for j = 1, #mis_juegos do
-            if mis_juegos[j].id_juego == id_elegido then ya_esta = true break end
-          end
-          if ya_esta then
-            mostrar_aviso(tr(34), 40)
+      elseif #mis_juegos >= max_j then
+        mostrar_aviso("max " .. max_j .. " games!", 40)
+      else
+        local cats_lib, _, _ = calc_mem_libre()
+        local es_custom = (busq_cursor == 1 and #busq_texto > 0)
+        local req_cats = es_custom and ((mem_ext == 1) and 12 or 9) or 7
+        if cats_lib < req_cats then
+          mostrar_aviso(tr_shop(13), 40)
+        else
+          local nuevo_g = nil
+          if es_custom then
+            nuevo_g = crear_objeto_juego(0, busq_texto)
           else
-            local nuevo_g = crear_objeto_juego(id_elegido, nil)
+            local off_c = (#busq_texto > 0) and 1 or 0
+            local id_db = busq_resultados[busq_cursor - off_c]
+            if id_db then
+              nuevo_g = crear_objeto_juego(id_db, nil)
+            end
+          end
+          if nuevo_g then
             add(mis_juegos, nuevo_g)
             guardar_datos()
             juego_sel = #mis_juegos + 1
-            mostrar_aviso(tr(33), 45)
+            mostrar_aviso(tr(29), 40)
             cambiar_estado(2)
           end
         end
-      elseif tiene_custom then
-        local nuevo_g = crear_objeto_juego(0, limpiar_espacios_der(busq_texto))
-        add(mis_juegos, nuevo_g)
-        guardar_datos()
-        juego_sel = #mis_juegos + 1
-        mostrar_aviso(tr(33), 45)
-        cambiar_estado(2)
       end
     end
   end
@@ -1401,7 +1402,11 @@ function actualizar_buscador_categorias()
       confirm_exp_cursor = (confirm_exp_cursor == 1) and 2 or 1
     elseif btnp(4) then
       if confirm_exp_cursor == 1 then
-        if monedas >= 12 then
+        local cats_lib, _, _ = calc_mem_libre()
+        local req_add = (mem_ext == 1 and (#g.cats % 2 == 1)) and 0 or 1
+        if cats_lib < req_add then
+          mostrar_aviso(tr_shop(13), 40)
+        elseif monedas >= 12 then
           monedas = monedas - 12
           juegos_exp[juego_activo] = true
           if pendiente_cid > 0 then
@@ -1411,7 +1416,7 @@ function actualizar_buscador_categorias()
           guardar_datos()
           mostrar_aviso("slots: 20! (-12c)", 50)
         else
-          mostrar_aviso("need 12 coins!", 45)
+          mostrar_aviso(tr_shop(10) .. "12$", 45)
         end
       end
       confirm_exp_abierta = false
@@ -1488,12 +1493,13 @@ function actualizar_buscador_categorias()
           else
             local cats_lib, _, _ = calc_mem_libre()
             local lim_c = juegos_exp[juego_activo] and 20 or 12
-            if cats_lib <= 0 then
-              mostrar_aviso("mem full!", 40)
+            local ocupa_slot = (mem_ext == 0) or ((#g.cats % 2) == 0)
+            if ocupa_slot and cats_lib <= 0 then
+              mostrar_aviso(tr_shop(13), 40)
             elseif #g.cats >= lim_c then
               if not juegos_exp[juego_activo] then
                 if cats_lib < 8 then
-                  mostrar_aviso("low mem (" .. cats_lib .. "c)!", 45)
+                  mostrar_aviso(tr_shop(13), 45)
                 else
                   pendiente_cid = cid
                   confirm_exp_abierta = true
@@ -1514,6 +1520,7 @@ function actualizar_buscador_categorias()
     end
   end
 end
+
 
 -- =========================================================
 -- parte 4b: contadores en tiempo real y menu de opciones
@@ -1940,7 +1947,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.11", 12, 7, 7)
+  print("counter games xtree v0.12", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -2829,7 +2836,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.11",
+    "version: v0.12",
     "",
     tr(37),
     "martstartiv",
