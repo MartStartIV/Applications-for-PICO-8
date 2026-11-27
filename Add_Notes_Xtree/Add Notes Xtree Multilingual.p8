@@ -2,13 +2,13 @@ pico-8 cartridge // http://pico-8.com
 version 43
 __lua__
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.06]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.07]
 -- PARTE 1 DE 4: NÚCLEO DE INICIALIZACIÓN Y CONTROL DE FLUX
 -- =========================================================
 
 function _init()
   id_nombre = "ADD NOTES XTREE"
-  id_version = "V0.06"
+  id_version = "V0.07"
   
   -- MÁQUINA DE ESTADOS COMPATIBLE CON MIPS
   -- 0 = selector de idioma
@@ -133,6 +133,14 @@ function _init()
   config_alm_plus = 0        -- 0 = clásico (default), 1 = almacenamiento extra plus (5x)
   aviso_plus_abierto = false -- controla la ventana emergente de confirmación
   aviso_plus_cursor = 2      -- 1 = aceptar, 2 = cancelar (por seguridad empieza en cancelar)
+
+  config_exp_modo = 0        -- 0 = off, 1 = cstore 12kb, 2 = printh txt, 3 = ambos
+  exp_abierta = false        -- ventana emergente de funciones experimentales
+  exp_cursor = 1             -- 1=test, 2=cstore 12kb, 3=export txt, 4=guardar, 5=cancelar
+  exp_temp_modo = 0          -- copia temporal antes de guardar/cancelar
+  exp_test_hecho = false     -- cerrojo: bloquea opciones hasta correr el test
+  exp_disp_cstore = false    -- resultado del test para cstore/reload
+  exp_disp_printh = false    -- resultado del test para printh
 
   -- Mini-diccionario extendido (85 palabras clave por idioma = solo 11 tokens en total)
   dict_autocomp = {
@@ -261,7 +269,7 @@ function _update()
   end
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.06]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.07]
 -- PARTE 2 DE 4: DESPACHADOR DE COLOR Y SELECTORES INICIALES
 -- =========================================================
 
@@ -342,15 +350,27 @@ function render_selector_perfil()
   print("(a): ok", 48, 112, 10)
 end
 -- =========================================================
--- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.06]
+-- PROYECTO: ADD NOTES XTREE ULTRA-COMPATIBLE [v0.07]
 -- PARTE 3 DE 4: MENÚ DE NOTAS Y MASCOTA CON EXPRESIONES
 -- =========================================================
 
 function actualizar_menu_principal_notas()
+  -- Escudo antirrebote al volver del teclado o de opciones (funciona igual en off y on)
+  if cooldown_teclado and cooldown_teclado > 0 then
+    if not btn(4) and not btnp(4) and stat(30) != 13 then
+      cooldown_teclado = cooldown_teclado - 1
+    end
+    bloqueo_a = true
+    return
+  end
+
   local total_actual = #lista_notas
   local max_opciones = total_actual + 1
   
-  if btn(4) or stat(30) == 13 then bloqueo_a = true else bloqueo_a = false end
+  -- Solo libera bloqueo_a cuando el botón A está físicamente suelto y sin flanco activo
+  if not btn(4) and not btnp(4) and stat(30) != 13 then
+    bloqueo_a = false
+  end
   local b_oprimido = btn(5) or stat(30) == 14
   
   if not b_oprimido then
@@ -415,7 +435,7 @@ function render_pantalla_menu_notas(c_fondo, c_display, c_txt_dis, c_btn_bse, c_
   rectfill(0, 0, 127, 11, c_display)
   line(0, 11, 127, 11, c_btn_txt)
   
-  print("ADD NOTES XTREE V0.06", 4, 3, c_txt_dis)
+  print("ADD NOTES XTREE V0.07", 4, 3, c_txt_dis)
   print(str_reloj, 94, 3, 5)
 
   local t_lang = textos_sistema[idioma_actual][6]  -- "notas creadas:"
@@ -777,9 +797,14 @@ function procesar_caracter_seguro(car)
         add(lista_notas, texto_nota_buffer, 1)
       end
       
-      -- Llamamos al nuevo motor unificado de escritura física
+      -- 1. Guarda en el sistema interno activo (Clásico o Almacenamiento Plus)
       guardar_todo_en_sd()
-      aviso_texto = textos_sistema[idioma_actual][13] .. "!"
+      -- 2. Añade progresivamente la nota al archivo .txt si la opción está activa
+      agregar_nota_a_txt_progresivo(texto_nota_buffer)
+
+      local mat_sys = textos_sistema[idioma_actual]
+      local idx_gdr = 13
+      aviso_texto = mat_sys[idx_gdr] .. "!"
       aviso_timer = 45
       estado_emocional = 7
       cronometro_emocion = 0
@@ -788,8 +813,8 @@ function procesar_caracter_seguro(car)
     modo_actual = 2
     cursor_menu = 1
     nota_seleccionada_idx = nil
-    bloqueo_a = true -- Evita el reingreso molesto
-    cooldown_teclado = 10 -- Escudo de 10 frames contra rebote tras escribir en SD
+    bloqueo_a = true
+    cooldown_teclado = 10
     return
     
   elseif car == "del" then
@@ -1022,7 +1047,7 @@ function render_pantalla_acercade()
     "--- " .. t_tit .. " ---",
     "",
     "app: add notes xtree",
-    t_ver .. " v0.06",
+    t_ver .. " v0.07",
     t_dev .. " martstartiv",
     t_ia .. " collaborative ai",
     "",
@@ -1114,34 +1139,94 @@ end
 
 -- [NUEVA FUNCIÓN CRÍTICA]: Motor único de serialización por bloques para TreeFrogUI
 
--- Convierte 5 IDs de carácter (0..61) en un único número de 32 bits de PICO-8
-function empaquetar_5_chars(c1, c2, c3, c4, c5)
-  -- Los 16 bits altos (enteros, 0..32767) guardan c1 (6 bits), c2 (6 bits) y 3 bits de c3
-  local c3_alto = flr(c3 / 8)
-  local c3_bajo = c3 % 8
-  local parte_entera = c1 + (c2 * 64) + (c3_alto * 4096)
-  -- Los 16 bits bajos (fraccionarios / 65536) guardan 3 bits de c3, c4 (6 bits) y c5 (6 bits)
-  local parte_frac = (c3_bajo + (c4 * 8) + (c5 * 512)) / 65536
-  return parte_entera + parte_frac
+
+function guardar_notas_cstore_12kb()
+  if (config_exp_modo != 1 and config_exp_modo != 3) or type(cstore) != "function" then return end
+  pcall(function()
+    local addr = 0x1000
+    poke(addr, #lista_notas)
+    addr = addr + 1
+    for i = 1, #lista_notas do
+      local s = lista_notas[i]
+      poke(addr, #s)
+      addr = addr + 1
+      for c = 1, #s do
+        local ch = sub(s, c, c)
+        local id_c = 1
+        for k = 1, #comp_dict do
+          if comp_dict[k] == ch then id_c = k break end
+        end
+        poke(addr, id_c)
+        addr = addr + 1
+      end
+    end
+    cstore(0x1000, 0x1000, addr - 0x1000)
+  end)
 end
 
--- Extrae los 5 IDs de carácter (0..61) desde un número de 32 bits de PICO-8
-function desempaquetar_5_chars(val)
-  local v = val or 0
+
+function cargar_notas_cstore_12kb()
+  if (config_exp_modo != 1 and config_exp_modo != 3) or type(reload) != "function" then return end
+  pcall(function()
+    reload(0x1000, 0x1000, 1400)
+    local tot = peek(0x1000)
+    if tot >= 1 and tot <= total_notas_permitidas then
+      lista_notas = {}
+      local addr = 0x1001
+      for i = 1, tot do
+        local l = peek(addr)
+        addr = addr + 1
+        if l < 0 or l > 120 then l = 0 end
+        local txt = ""
+        for c = 1, l do
+          local id_c = peek(addr)
+          addr = addr + 1
+          txt = txt .. (comp_dict[id_c] or " ")
+        end
+        add(lista_notas, txt)
+      end
+    end
+  end)
+end
+
+
+function exportar_notas_printh_txt()
+  if (config_exp_modo != 2 and config_exp_modo != 3) or type(printh) != "function" then return end
+  pcall(function()
+    printh("=== add notes xtree ===", "xtree_notas.txt", true)
+    for i = 1, #lista_notas do
+      printh(i .. ": " .. lista_notas[i], "xtree_notas.txt", false)
+    end
+  end)
+end
+
+
+-- Empaqueta 2 IDs de carácter (0..61) en un entero puro de PICO-8 (máx 3965, cero decimales)
+function empaquetar_2_chars(c1, c2)
+  return (c1 or 0) + ((c2 or 0) * 64)
+end
+
+-- Extrae los 2 IDs de carácter desde un entero puro
+function desempaquetar_2_chars(val)
+  local v = flr(val or 0)
   if v < 0 then v = 0 end
-  local parte_entera = flr(v)
-  local parte_frac = flr((v - parte_entera) * 65536 + 0.5)
+  local c1 = v % 64
+  local c2 = flr(v / 64) % 64
+  return c1, c2
+end
 
-  local c1 = parte_entera % 64
-  local c2 = flr(parte_entera / 64) % 64
-  local c3_alto = flr(parte_entera / 4096) % 8
 
-  local c3_bajo = parte_frac % 8
-  local c4 = flr(parte_frac / 8) % 64
-  local c5 = flr(parte_frac / 512) % 64
-
-  local c3 = (c3_alto * 8) + c3_bajo
-  return c1, c2, c3, c4, c5
+-- Agrega progresivamente una nota al final de xtree_notas.txt sin borrar las anteriores
+function agregar_nota_a_txt_progresivo(texto_nota)
+  if (config_exp_modo != 2 and config_exp_modo != 3) or type(printh) != "function" then return end
+  if not texto_nota or #texto_nota == 0 then return end
+  pcall(function()
+    local anio = stat(90) or 2026
+    local mes = stat(91) or 1
+    local dia = stat(92) or 1
+    local marca = "[" .. anio .. "-" .. mes .. "-" .. dia .. " " .. (str_reloj or "00:00") .. "]"
+    printh(marca .. " " .. texto_nota, "xtree_notas.txt", false)
+  end)
 end
 
 
@@ -1152,13 +1237,15 @@ function guardar_todo_en_sd()
     dset(2, idx_tema)
     dset(3, #lista_notas)
     
-    local empaquetado_config = config_zoom + (config_motivacion * 10) + (btn_teclado_modo * 100) + (config_autocomp * 1000) + (config_alm_plus * 10000)
+    -- Empaquetado 100% entero en Slot 4 (valor máximo = 499)
+    local empaquetado_config = config_zoom + (config_motivacion * 2) + (btn_teclado_modo * 4) + (config_autocomp * 32) + (config_alm_plus * 64) + (config_exp_modo * 128)
     dset(4, empaquetado_config)
     
     if config_alm_plus == 1 then
-      -- MOTOR PLUS COMPRIMIDO (5 caracteres por slot desde el Slot 5)
+      -- MOTOR PLUS ENTERO (2 caracteres enteros por slot desde el Slot 5 hasta el 125)
       local puntero_slot = 5
       for i = 1, total_notas_permitidas do
+        if puntero_slot > 125 then break end
         if i <= #lista_notas then
           local nota_str = lista_notas[i]
           local largo = #nota_str
@@ -1178,13 +1265,11 @@ function guardar_todo_en_sd()
             add(ids, id_char)
           end
 
-          for b = 1, largo, 5 do
+          for b = 1, largo, 2 do
+            if puntero_slot > 125 then break end
             local v1 = ids[b] or 0
             local v2 = ids[b + 1] or 0
-            local v3 = ids[b + 2] or 0
-            local v4 = ids[b + 3] or 0
-            local v5 = ids[b + 4] or 0
-            dset(puntero_slot, empaquetar_5_chars(v1, v2, v3, v4, v5))
+            dset(puntero_slot, empaquetar_2_chars(v1, v2))
             puntero_slot = puntero_slot + 1
           end
         else
@@ -1193,13 +1278,15 @@ function guardar_todo_en_sd()
         end
       end
     else
-      -- MOTOR CLÁSICO ORIGINAL (1 carácter por slot desde el Slot 10)
+      -- MOTOR CLÁSICO ORIGINAL (1 carácter por slot desde el Slot 10 hasta el 125)
       for i = 1, total_notas_permitidas do
         local slot_base = 10 + (i - 1) * 130
+        if slot_base > 125 then break end
         if i <= #lista_notas then
           local nota_str = lista_notas[i]
           dset(slot_base, #nota_str)
           for c = 1, #nota_str do
+            if (slot_base + c) > 125 then break end
             local letra = sub(nota_str, c, c)
             local id_char = 1
             for k = 1, #comp_dict do
@@ -1215,6 +1302,9 @@ function guardar_todo_en_sd()
         end
       end
     end
+
+    -- Respaldo experimental cstore (solo si el usuario lo activó y el hardware lo soporta)
+    guardar_notas_cstore_12kb()
   end)
 end
 
@@ -1237,56 +1327,59 @@ function cargar_configuracion_inicial()
     local total_g = dget(3) or 0
     if total_g < 0 or total_g > total_notas_permitidas then total_g = 0 end
     
-    local empaquetado_config = dget(4) or 0
-    config_zoom = empaquetado_config % 10
-    config_motivacion = flr((empaquetado_config % 100) / 10)
-    btn_teclado_modo = flr((empaquetado_config % 1000) / 100)
-    config_autocomp = flr((empaquetado_config % 10000) / 1000)
-    config_alm_plus = flr(empaquetado_config / 10000)
+    -- Desempaquetado 100% entero del Slot 4
+    local empaquetado_config = flr(dget(4) or 0)
+    config_zoom = empaquetado_config % 2
+    config_motivacion = flr(empaquetado_config / 2) % 2
+    btn_teclado_modo = flr(empaquetado_config / 4) % 8
+    config_autocomp = flr(empaquetado_config / 32) % 2
+    config_alm_plus = flr(empaquetado_config / 64) % 2
+    config_exp_modo = flr(empaquetado_config / 128) % 4
     
     if config_zoom < 0 or config_zoom > 1 then config_zoom = 0 end
     if config_motivacion < 0 or config_motivacion > 1 then config_motivacion = 0 end
     if btn_teclado_modo < 0 or btn_teclado_modo > 4 then btn_teclado_modo = 0 end
     if config_autocomp < 0 or config_autocomp > 1 then config_autocomp = 0 end
     if config_alm_plus < 0 or config_alm_plus > 1 then config_alm_plus = 0 end
+    if config_exp_modo < 0 or config_exp_modo > 3 then config_exp_modo = 0 end
     
     if config_alm_plus == 1 then
-      -- LECTURA MOTOR PLUS COMPRIMIDO (Slot 5+)
+      -- LECTURA MOTOR PLUS ENTERO (Slot 5..125)
       local puntero_slot = 5
       for i = 1, total_g do
-        local largo = dget(puntero_slot) or 0
+        if puntero_slot > 125 then break end
+        local largo = flr(dget(puntero_slot) or 0)
         puntero_slot = puntero_slot + 1
         if largo < 0 or largo > 120 then largo = 0 end
 
         local texto_reconstruido = ""
-        local bloques = flr((largo + 4) / 5)
+        local bloques = flr((largo + 1) / 2)
         for b = 1, bloques do
-          local c1, c2, c3, c4, c5 = desempaquetar_5_chars(dget(puntero_slot))
+          if puntero_slot > 125 then break end
+          local c1, c2 = desempaquetar_2_chars(dget(puntero_slot))
           puntero_slot = puntero_slot + 1
-          local grupo = {c1, c2, c3, c4, c5}
-          for g = 1, 5 do
-            if #texto_reconstruido < largo then
-              local id_c = grupo[g]
-              if id_c >= 1 and id_c <= #comp_dict then
-                texto_reconstruido = texto_reconstruido .. comp_dict[id_c]
-              else
-                texto_reconstruido = texto_reconstruido .. " "
-              end
-            end
+          
+          if #texto_reconstruido < largo then
+            texto_reconstruido = texto_reconstruido .. (comp_dict[c1] or " ")
+          end
+          if #texto_reconstruido < largo then
+            texto_reconstruido = texto_reconstruido .. (comp_dict[c2] or " ")
           end
         end
         add(lista_notas, texto_reconstruido)
       end
     else
-      -- LECTURA MOTOR CLÁSICO ORIGINAL (Slot 10+)
+      -- LECTURA MOTOR CLÁSICO ORIGINAL (Slot 10..125)
       for i = 1, total_g do
         local slot_base = 10 + (i - 1) * 130
-        local longitud_texto = dget(slot_base) or 0
+        if slot_base > 125 then break end
+        local longitud_texto = flr(dget(slot_base) or 0)
         if longitud_texto < 0 or longitud_texto > 120 then longitud_texto = 0 end
         
         local texto_reconstruido = ""
         for c = 1, longitud_texto do
-          local id_char = dget(slot_base + c) or 1
+          if (slot_base + c) > 125 then break end
+          local id_char = flr(dget(slot_base + c) or 1)
           if id_char >= 1 and id_char <= #comp_dict then
             texto_reconstruido = texto_reconstruido .. comp_dict[id_char]
           else
@@ -1296,12 +1389,15 @@ function cargar_configuracion_inicial()
         add(lista_notas, texto_reconstruido)
       end
     end
+
+    cargar_notas_cstore_12kb()
     
     modo_actual = 2 
   else
     modo_actual = 0 
   end
 end
+
 
 function actualizar_opciones_adicionales()
   if sub_btn_abierta then
@@ -1314,11 +1410,32 @@ function actualizar_opciones_adicionales()
     return
   end
 
-  if btnp(2) then config_cursor = config_cursor - 1 if config_cursor < 1 then config_cursor = 7 end end
-  if btnp(3) then config_cursor = config_cursor + 1 if config_cursor > 7 then config_cursor = 1 end end
+  if exp_abierta then
+    actualizar_ventana_experimentales()
+    return
+  end
+
+  -- Navegación vertical sobre 8 opciones con scroll automático (ventana de 5 visibles)
+  if btnp(2) then
+    config_cursor = config_cursor - 1
+    if config_cursor < 1 then config_cursor = 8 end
+  end
+  if btnp(3) then
+    config_cursor = config_cursor + 1
+    if config_cursor > 8 then config_cursor = 1 end
+  end
+
+  -- Ajuste automático de ventana deslizante (config_scroll)
+  config_scroll = config_scroll or 0
+  if config_cursor <= config_scroll then
+    config_scroll = config_cursor - 1
+  elseif config_cursor > config_scroll + 5 then
+    config_scroll = config_cursor - 5
+  end
 
   if btnp(5) or stat(30) == 14 then
     config_abierta = false
+    config_scroll = 0
     guardar_todo_en_sd()
     return
   end
@@ -1342,7 +1459,7 @@ function actualizar_opciones_adicionales()
     if (btnp(4) or stat(30) == 13) and confirma_borrado then
       pcall(function()
         cartdata("xtree_notes_pro")
-        for slot = 0, 1500 do dset(slot, 0) end 
+        for slot = 0, 125 do dset(slot, 0) end 
       end)
       lista_notas = {}
       idioma_actual = 1
@@ -1353,7 +1470,9 @@ function actualizar_opciones_adicionales()
       btn_teclado_modo = 0
       config_autocomp = 0
       config_alm_plus = 0
+      config_exp_modo = 0
       config_abierta = false
+      config_scroll = 0
       modo_actual = 0 
       return
     end
@@ -1375,10 +1494,27 @@ function actualizar_opciones_adicionales()
     end
 
   elseif config_cursor == 7 then
-    -- Abre confirmación antes de cambiar entre Clásico y Alm. Plus
     if btnp(0) or btnp(1) or btnp(4) or stat(30) == 13 then
       aviso_plus_abierto = true
-      aviso_plus_cursor = 2 -- Por seguridad inicia seleccionado en "cancelar"
+      aviso_plus_cursor = 2
+      bloqueo_a = true
+      return
+    end
+
+  elseif config_cursor == 8 then
+    if btnp(4) or stat(30) == 13 then
+      exp_abierta = true
+      exp_cursor = 1
+      exp_temp_modo = config_exp_modo
+      if config_exp_modo > 0 then
+        exp_test_hecho = true
+        exp_disp_cstore = (config_exp_modo == 1 or config_exp_modo == 3)
+        exp_disp_printh = (config_exp_modo == 2 or config_exp_modo == 3)
+      else
+        exp_test_hecho = false
+        exp_disp_cstore = false
+        exp_disp_printh = false
+      end
       bloqueo_a = true
       return
     end
@@ -1386,8 +1522,8 @@ function actualizar_opciones_adicionales()
 end
 
 
+
 function actualizar_aviso_alm_plus()
-  -- Si pulsa B, cancela y vuelve a la ventana de configuraciones adicionales
   if btnp(5) or stat(30) == 14 then
     aviso_plus_abierto = false
     bloqueo_a = false
@@ -1402,21 +1538,20 @@ function actualizar_aviso_alm_plus()
     if not bloqueo_a then
       bloqueo_a = true
       if aviso_plus_cursor == 1 then
-        -- ACEPTAR: Limpia notas incompatibles, guarda el cambio y vuelve al menú principal
         lista_notas = {}
         config_alm_plus = (config_alm_plus == 0) and 1 or 0
         pcall(function()
-          for s = 5, 1310 do dset(s, 0) end
+          for s = 5, 125 do dset(s, 0) end
         end)
         guardar_todo_en_sd()
         aviso_texto = "ok!"
         aviso_timer = 35
         aviso_plus_abierto = false
         config_abierta = false
+        config_scroll = 0
         cursor_menu = 1
         cooldown_teclado = 10
       else
-        -- CANCELAR: Cierra solo el aviso y regresa a configuraciones adicionales
         aviso_plus_abierto = false
       end
     end
@@ -1425,79 +1560,179 @@ function actualizar_aviso_alm_plus()
   end
 end
 
+
+function actualizar_ventana_experimentales()
+  if btnp(5) or stat(30) == 14 then
+    exp_abierta = false
+    bloqueo_a = false
+    return
+  end
+
+  if btnp(2) then
+    exp_cursor = exp_cursor - 1
+    if exp_cursor < 1 then exp_cursor = 5 end
+  end
+  if btnp(3) then
+    exp_cursor = exp_cursor + 1
+    if exp_cursor > 5 then exp_cursor = 1 end
+  end
+
+  if exp_cursor == 4 and btnp(1) then exp_cursor = 5 end
+  if exp_cursor == 5 and btnp(0) then exp_cursor = 4 end
+
+  if exp_test_hecho then
+    if exp_cursor == 2 and exp_disp_cstore and (btnp(0) or btnp(1)) then
+      local c_on = (exp_temp_modo == 1 or exp_temp_modo == 3)
+      local p_on = (exp_temp_modo == 2 or exp_temp_modo == 3)
+      c_on = not c_on
+      exp_temp_modo = (c_on and 1 or 0) + (p_on and 2 or 0)
+    elseif exp_cursor == 3 and exp_disp_printh and (btnp(0) or btnp(1)) then
+      local c_on = (exp_temp_modo == 1 or exp_temp_modo == 3)
+      local p_on = (exp_temp_modo == 2 or exp_temp_modo == 3)
+      p_on = not p_on
+      exp_temp_modo = (c_on and 1 or 0) + (p_on and 2 or 0)
+    end
+  end
+
+  if btn(4) or stat(30) == 13 then
+    if not bloqueo_a then
+      bloqueo_a = true
+      if exp_cursor == 1 then
+        exp_disp_cstore = false
+        exp_disp_printh = false
+        if type(cstore) == "function" and type(reload) == "function" then
+          pcall(function()
+            poke(0x2000, 170)
+            cstore(0x2000, 0x2000, 1)
+            poke(0x2000, 0)
+            reload(0x2000, 0x2000, 1)
+            if peek(0x2000) == 170 then exp_disp_cstore = true end
+            poke(0x2000, 0)
+          end)
+        end
+        if type(printh) == "function" then
+          local ok_p = pcall(function()
+            printh("test", "xtree_test.tmp", true)
+          end)
+          if ok_p then exp_disp_printh = true end
+        end
+        exp_test_hecho = true
+
+      elseif exp_cursor == 4 then
+        if not exp_disp_cstore and (exp_temp_modo == 1 or exp_temp_modo == 3) then
+          exp_temp_modo = exp_temp_modo - 1
+        end
+        if not exp_disp_printh and (exp_temp_modo == 2 or exp_temp_modo == 3) then
+          exp_temp_modo = exp_temp_modo - 2
+        end
+        
+        config_exp_modo = exp_temp_modo
+        pcall(function() cartdata("xtree_notes_pro") end)
+        guardar_todo_en_sd()
+
+        if config_exp_modo == 2 or config_exp_modo == 3 then
+          pcall(function()
+            printh("=== add notes xtree ===", "xtree_notas.txt", true)
+            for i = 1, #lista_notas do
+              agregar_nota_a_txt_progresivo(lista_notas[i])
+            end
+          end)
+        end
+
+        aviso_texto = "ok!"
+        aviso_timer = 35
+        exp_abierta = false
+
+      elseif exp_cursor == 5 then
+        exp_abierta = false
+      end
+    end
+  else
+    bloqueo_a = false
+  end
+end
+
+
 function render_ventana_opciones_adicionales(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
   local t_config = {
-    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacion", "formatear", "si", "no", "b: salir/grv", "map/test btn", "autocomplet.", "alm. plus"},
-    {"extra cfgs",   "text zoom",  "lang/idioma", "motivation", "wipe clear", "yes","no", "b: exit/save", "btn map/test", "autocomplete", "storage plus"},
-    {"cfg. dodatk",  "zoom tekstu", "jezyk/lang", "motywacja",  "czyszczenie", "tak","nie","b: wyjdz/zap", "map/test btn", "autouzupeln.", "pamiec plus"},
-    {"dop. nastr",   "masshtab",   "yazik/lang",  "motivaciya", "ochistka",   "da", "net","b: vyhod/shran","test knopok",  "avtodopoln.",  "pamyat plus"},
-    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacao",  "formatar",   "sim","nao","b: sair/salv", "map/test btn", "autocomplet.", "armaz. plus"},
-    {"cfg. extra",   "zoom testo", "lingua/lang", "motivazione","formatta",   "si", "no", "b: esci/salv", "map/test btn", "autocomplet.", "memoria plus"},
-    {"cfg. extras",  "zoom texte", "langue/lang", "motivation", "effacer to", "oui","non","b: sortir/grd", "map/test btn", "autocomplet.", "stock. plus"},
-    {"sono hoka",    "moji zoom",  "gengo/lang",  "douki zuke", "shokika",    "hai","iie","b: modoru/hoz", "btn map/test", "jidou hokan",  "hozon plus"},
-    {"geng duo she", "zi ti da xiao","yu yan/lang","ji li",       "qing chu",   "shi","fou","b: tui chu/bao","anjian ceshi", "zidong buquan","cunchu plus"},
-    {"gita seolt",   "geulja zoom","eoneo/lang",  "donggi buyeo","gongjang ch","ye", "ani","b: nagagi/jeo", "beoteun teseu","jadong wanseo","jeojang plus"},
-    {"ek ayarlar",   "metin zoomu", "dil/lang",    "motivasyon", "sifirla",    "evet","hayir","b: cikis/kayd","tus test/ayar","otomatik tam.","depolama plus"}
+    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacion", "formatear", "si", "no", "b: salir/grv", "map/test btn", "autocomplet.", "alm. plus",     "func. experim."},
+    {"extra cfgs",   "text zoom",  "lang/idioma", "motivation", "wipe clear", "yes","no", "b: exit/save", "btn map/test", "autocomplete", "storage plus", "exp. features"},
+    {"cfg. dodatk",  "zoom tekstu", "jezyk/lang", "motywacja",  "czyszczenie", "tak","nie","b: wyjdz/zap", "map/test btn", "autouzupeln.", "pamiec plus",  "funkcje eksp."},
+    {"dop. nastr",   "masshtab",   "yazik/lang",  "motivaciya", "ochistka",   "da", "net","b: vyhod/shran","test knopok",  "avtodopoln.",  "pamyat plus",  "eksp. funkcii"},
+    {"cfg. extras",  "zoom letra", "idioma/lang", "motivacao",  "formatar",   "sim","nao","b: sair/salv", "map/test btn", "autocomplet.", "armaz. plus",  "func. experim."},
+    {"cfg. extra",   "zoom testo", "lingua/lang", "motivazione","formatta",   "si", "no", "b: esci/salv", "map/test btn", "autocomplet.", "memoria plus", "funz. sperim."},
+    {"cfg. extras",  "zoom texte", "langue/lang", "motivation", "effacer to", "oui","non","b: sortir/grd", "map/test btn", "autocomplet.", "stock. plus",  "fonct. exper."},
+    {"sono hoka",    "moji zoom",  "gengo/lang",  "douki zuke", "shokika",    "hai","iie","b: modoru/hoz", "btn map/test", "jidou hokan",  "hozon plus",   "jikken kinou"},
+    {"geng duo she", "zi ti da xiao","yu yan/lang","ji li",       "qing chu",   "shi","fou","b: tui chu/bao","anjian ceshi", "zidong buquan","cunchu plus",  "shiyan gongn."},
+    {"gita seolt",   "geulja zoom","eoneo/lang",  "donggi buyeo","gongjang ch","ye", "ani","b: nagagi/jeo", "beoteun teseu","jadong wanseo","jeojang plus", "silheom gineu"},
+    {"ek ayarlar",   "metin zoomu", "dil/lang",    "motivasyon", "sifirla",    "evet","hayir","b: cikis/kayd","tus test/ayar","otomatik tam.","depolama plus","deneysel oz."}
   }
 
   local m_data = t_config[idioma_actual]
-  local k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11 = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
-  local vx, vy, vw, vh = 12, 4, 104, 120
+  local k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12 = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+  local vx, vy, vw, vh = 10, 12, 108, 104
+  local scr = config_scroll or 0
   
   rectfill(vx, vy, vx + vw, vy + vh, 0)         
   rect(vx, vy, vx + vw, vy + vh, c_btn_bse)     
-  rectfill(vx + 2, vy + 2, vx + vw - 2, vy + 10, c_display) 
-  print(m_data[k1], vx + 6, vy + 3, c_txt_dis)   
-  
-  -- Fila 1: Zoom de letra
-  local ly1 = vy + 14
-  if config_cursor == 1 then rectfill(vx + 4, ly1 - 1, vx + vw - 4, ly1 + 6, c_btn_bse) end
-  print(m_data[k2] .. ":", vx + 6, ly1, config_cursor == 1 and c_btn_txt or c_txt_dis)
-  print(config_zoom == 1 and "on" or "off", vx + 80, ly1, config_zoom == 1 and 10 or 8)
-  
-  -- Fila 2: Idioma rápido
-  local ly2 = vy + 26
-  if config_cursor == 2 then rectfill(vx + 4, ly2 - 1, vx + vw - 4, ly2 + 6, c_btn_bse) end
-  print(m_data[k3] .. ":", vx + 6, ly2, config_cursor == 2 and c_btn_txt or c_txt_dis)
-  print("<" .. codigos_idioma[idioma_actual] .. ">", vx + 74, ly2, 11)
-  
-  -- Fila 3: Motivación
-  local ly3 = vy + 38
-  if config_cursor == 3 then rectfill(vx + 4, ly3 - 1, vx + vw - 4, ly3 + 6, c_btn_bse) end
-  print(m_data[k4] .. ":", vx + 6, ly3, config_cursor == 3 and c_btn_txt or c_txt_dis)
-  print(config_motivacion == 1 and "on" or "off", vx + 80, ly3, config_motivacion == 1 and 10 or 8)
-  
-  -- Fila 4: Formateo de Fábrica
-  local ly4 = vy + 50
-  if config_cursor == 4 then rectfill(vx + 4, ly4 - 1, vx + vw - 4, ly4 + 6, c_btn_bse) end
-  print(m_data[k5], vx + 6, ly4, config_cursor == 4 and c_btn_txt or 8)
-  if confirma_borrado then
-    rectfill(vx + 76, ly4 - 1, vx + 98, ly4 + 5, 8) 
-    print(m_data[k6], vx + 78, ly4, 7)
-  else
-    rectfill(vx + 76, ly4 - 1, vx + 98, ly4 + 5, 12) 
-    print(m_data[k7], vx + 78, ly4, 7)
+  rectfill(vx + 2, vy + 2, vx + vw - 2, vy + 12, c_display) 
+  print(m_data[k1], vx + 6, vy + 4, c_txt_dis)
+
+  -- Indicadores visuales discretos de desplazamiento (arriba / abajo)
+  if scr > 0 then print("^", vx + vw - 9, vy + 4, 11) end
+  if scr < 3 then print("v", vx + vw - 9, vy + vh - 10, 11) end
+
+  -- Renderizado deslizante de exactamente 5 filas cómodas a la vez (15 px por fila)
+  for slot_vis = 1, 5 do
+    local idx_op = scr + slot_vis
+    local ly = vy + 18 + (slot_vis - 1) * 15
+    local sel = (config_cursor == idx_op)
+
+    if sel then
+      rectfill(vx + 4, ly - 2, vx + vw - 6, ly + 7, c_btn_bse)
+    end
+
+    if idx_op == 1 then
+      print(m_data[k2] .. ":", vx + 6, ly, sel and c_btn_txt or c_txt_dis)
+      print(config_zoom == 1 and "on" or "off", vx + 80, ly, config_zoom == 1 and 10 or 8)
+
+    elseif idx_op == 2 then
+      print(m_data[k3] .. ":", vx + 6, ly, sel and c_btn_txt or c_txt_dis)
+      print("<" .. codigos_idioma[idioma_actual] .. ">", vx + 74, ly, 11)
+
+    elseif idx_op == 3 then
+      print(m_data[k4] .. ":", vx + 6, ly, sel and c_btn_txt or c_txt_dis)
+      print(config_motivacion == 1 and "on" or "off", vx + 80, ly, config_motivacion == 1 and 10 or 8)
+
+    elseif idx_op == 4 then
+      print(m_data[k5], vx + 6, ly, sel and c_btn_txt or 8)
+      if confirma_borrado then
+        rectfill(vx + 76, ly - 1, vx + 98, ly + 6, 8)
+        print(m_data[k6], vx + 78, ly, 7)
+      else
+        rectfill(vx + 76, ly - 1, vx + 98, ly + 6, 12)
+        print(m_data[k7], vx + 78, ly, 7)
+      end
+
+    elseif idx_op == 5 then
+      print(m_data[k9], vx + 6, ly, sel and c_btn_txt or 11)
+      print("[>]", vx + 84, ly, sel and c_btn_txt or 10)
+
+    elseif idx_op == 6 then
+      print(m_data[k10] .. ":", vx + 6, ly, sel and c_btn_txt or c_txt_dis)
+      print(config_autocomp == 1 and "on" or "off", vx + 80, ly, config_autocomp == 1 and 10 or 8)
+
+    elseif idx_op == 7 then
+      print(m_data[k11] .. ":", vx + 6, ly, sel and c_btn_txt or 10)
+      print(config_alm_plus == 1 and "on" or "off", vx + 80, ly, config_alm_plus == 1 and 10 or 8)
+
+    elseif idx_op == 8 then
+      print(m_data[k12], vx + 6, ly, sel and c_btn_txt or 14)
+      print("[>]", vx + 84, ly, sel and c_btn_txt or 14)
+    end
   end
-
-  -- Fila 5: Mapeo y Testeo Técnico de Botones
-  local ly5 = vy + 62
-  if config_cursor == 5 then rectfill(vx + 4, ly5 - 1, vx + vw - 4, ly5 + 6, c_btn_bse) end
-  print(m_data[k9], vx + 6, ly5, config_cursor == 5 and c_btn_txt or 11)
-  print("[>]", vx + 84, ly5, config_cursor == 5 and c_btn_txt or 10)
-
-  -- Fila 6: Autocompletado
-  local ly6 = vy + 74
-  if config_cursor == 6 then rectfill(vx + 4, ly6 - 1, vx + vw - 4, ly6 + 6, c_btn_bse) end
-  print(m_data[k10] .. ":", vx + 6, ly6, config_cursor == 6 and c_btn_txt or c_txt_dis)
-  print(config_autocomp == 1 and "on" or "off", vx + 80, ly6, config_autocomp == 1 and 10 or 8)
-
-  -- Fila 7: Almacenamiento Extra Plus
-  local ly7 = vy + 86
-  if config_cursor == 7 then rectfill(vx + 4, ly7 - 1, vx + vw - 4, ly7 + 6, c_btn_bse) end
-  print(m_data[k11] .. ":", vx + 6, ly7, config_cursor == 7 and c_btn_txt or 10)
-  print(config_alm_plus == 1 and "on" or "off", vx + 80, ly7, config_alm_plus == 1 and 10 or 8)
   
-  print(m_data[k8], vx + 14, vy + 106, 6)
+  print(m_data[k8], vx + 14, vy + 94, 6)
 
   if sub_btn_abierta then
     render_subventana_botones(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
@@ -1506,6 +1741,127 @@ function render_ventana_opciones_adicionales(c_display, c_btn_bse, c_btn_txt, c_
   if aviso_plus_abierto then
     render_aviso_alm_plus()
   end
+
+  if exp_abierta then
+    render_ventana_experimentales(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
+  end
+end
+
+
+function render_ventana_experimentales(c_display, c_btn_bse, c_btn_txt, c_txt_dis)
+  local t_exp = {
+    {"func. experim.", "ejecutar test",  "alm. 12kb cart", "exportar .txt", "guardar",  "cancelar", "bloq", "no disp."}, -- 1. es
+    {"exp. features",  "run hardware test","12kb cart save","export .txt",   "save",     "cancel",   "lock", "unavail."}, -- 2. en
+    {"funkcje eksp.",  "uruchom test",   "pamiec 12kb",    "eksport .txt",  "zapisz",   "anuluj",   "blok", "niedost."}, -- 3. pl
+    {"eksp. funkcii",  "zapustit test",  "pamyat 12kb",    "eksport .txt",  "sohranit", "otmena",   "blok", "nedost."},  -- 4. ru
+    {"func. experim.", "executar test",  "armaz. 12kb",    "exportar .txt", "salvar",   "cancelar", "bloq", "indisp."},  -- 5. pt
+    {"funz. sperim.",  "esegui test",    "memoria 12kb",   "esporta .txt",  "salva",    "annulla",  "bloc", "non disp."},-- 6. it
+    {"fonct. exper.",  "lancer le test", "stock. 12kb",    "exporter .txt", "garder",   "annuler",  "bloq", "indisp."},  -- 7. fr
+    {"jikken kinou",   "tesuto jikkou",  "12kb hozon",     ".txt shutsury.", "hozon",    "chuushi",  "lock", "fuka"},     -- 8. jp
+    {"shiyan gongn.",  "yunxing ceshi",  "12kb cunchu",    "daochu .txt",   "baocun",   "quxiao",   "suo",  "bukeyong"}, -- 9. cn
+    {"silheom gineu",  "teseuteu silh.", "12kb jeojang",   ".txt naebon.",  "jeojang",  "chwiso",   "jamg", "bulga"},    -- 10. kr
+    {"deneysel oz.",   "testi calistir", "12kb depolama",  ".txt aktar",    "kaydet",   "iptal",    "kilit","yok"}       -- 11. tr
+  }
+
+  local e_data = t_exp[idioma_actual]
+  local j1, j2, j3, j4, j5, j6, j7, j8 = 1, 2, 3, 4, 5, 6, 7, 8
+  local ex, ey, ew, eh = 6, 14, 116, 100
+
+  rectfill(ex, ey, ex + ew, ey + eh, 0)
+  rect(ex, ey, ex + ew, ey + eh, 14)
+  rectfill(ex + 2, ey + 2, ex + ew - 2, ey + 11, c_display)
+  print(e_data[j1], ex + 6, ey + 4, 7)
+
+  -- Fila 1: Botón obligatorio [Ejecutar Test]
+  local y1 = ey + 16
+  if exp_cursor == 1 then
+    rectfill(ex + 4, y1 - 2, ex + ew - 4, y1 + 8, 11)
+    print("[ " .. e_data[j2] .. " ]", ex + 10, y1, 0)
+  else
+    rect(ex + 4, y1 - 2, ex + ew - 4, y1 + 8, 3)
+    print("[ " .. e_data[j2] .. " ]", ex + 10, y1, 11)
+  end
+
+  -- Fila 2: Almacenamiento Extra 12KB (cstore/reload)
+  local y2 = ey + 34
+  local c_act = (exp_temp_modo == 1 or exp_temp_modo == 3)
+  if exp_cursor == 2 then rectfill(ex + 4, y2 - 2, ex + ew - 4, y2 + 7, c_btn_bse) end
+  print(e_data[j3] .. ":", ex + 6, y2, exp_cursor == 2 and c_btn_txt or (exp_test_hecho and 7 or 5))
+  if not exp_test_hecho then
+    print("[" .. e_data[j7] .. "]", ex + 82, y2, 8)
+  elseif not exp_disp_cstore then
+    print(e_data[j8], ex + 78, y2, 8)
+  else
+    print(c_act and "on" or "off", ex + 92, y2, c_act and 10 or 8)
+  end
+
+  -- Fila 3: Exportación a archivo .txt externo (printh)
+  local y3 = ey + 49
+  local p_act = (exp_temp_modo == 2 or exp_temp_modo == 3)
+  if exp_cursor == 3 then rectfill(ex + 4, y3 - 2, ex + ew - 4, y3 + 7, c_btn_bse) end
+  print(e_data[j4] .. ":", ex + 6, y3, exp_cursor == 3 and c_btn_txt or (exp_test_hecho and 7 or 5))
+  if not exp_test_hecho then
+    print("[" .. e_data[j7] .. "]", ex + 82, y3, 8)
+  elseif not exp_disp_printh then
+    print(e_data[j8], ex + 78, y3, 8)
+  else
+    print(p_act and "on" or "off", ex + 92, y3, p_act and 10 or 8)
+  end
+
+  -- Línea separadora y botones inferiores: [Guardar] (4) | [Cancelar] (5)
+  line(ex + 4, ey + 64, ex + ew - 4, ey + 64, 5)
+  local y_btn = ey + 71
+
+  -- Botón GUARDAR (4)
+  local gx = ex + 31 - (#e_data[j5] * 2)
+  if exp_cursor == 4 then
+    rectfill(ex + 8, y_btn, ex + 54, y_btn + 11, 11)
+    print(e_data[j5], gx, y_btn + 3, 0)
+  else
+    rect(ex + 8, y_btn, ex + 54, y_btn + 11, 3)
+    print(e_data[j5], gx, y_btn + 3, 11)
+  end
+
+  -- Botón CANCELAR (5)
+  local cx = ex + 85 - (#e_data[j6] * 2)
+  if exp_cursor == 5 then
+    rectfill(ex + 62, y_btn, ex + 108, y_btn + 11, 8)
+    print(e_data[j6], cx, y_btn + 3, 7)
+  else
+    rect(ex + 62, y_btn, ex + 108, y_btn + 11, 2)
+    print(e_data[j6], cx, y_btn + 3, 8)
+  end
+
+  -- Pie de estado informativo adaptado a los 11 idiomas
+  local t_pie_ok = {
+    "test ok - a: sel",  -- 1. es
+    "test ok - a: sel",  -- 2. en
+    "test ok - a: wyb",  -- 3. pl
+    "test ok - a: vyb",  -- 4. ru
+    "test ok - a: sel",  -- 5. pt
+    "test ok - a: sel",  -- 6. it
+    "test ok - a: sel",  -- 7. fr
+    "test ok - a: sen",  -- 8. jp
+    "ceshi ok - a: xuan",-- 9. cn
+    "teseu ok - a: seon",-- 10. kr
+    "test ok - a: sec"   -- 11. tr
+  }
+  local t_pie_no = {
+    "ejecuta test antes",-- 1. es
+    "run test first",    -- 2. en
+    "najpierw test",     -- 3. pl
+    "snachala test",     -- 4. ru
+    "execute o test",    -- 5. pt
+    "esegui il test",    -- 6. it
+    "lancer le test",    -- 7. fr
+    "saki ni tesuto",    -- 8. jp
+    "xian yunxing ceshi",-- 9. cn
+    "meonjeo teseuteu",  -- 10. kr
+    "once testi yap"     -- 11. tr
+  }
+  local est_txt = exp_test_hecho and t_pie_ok[idioma_actual] or t_pie_no[idioma_actual]
+  local px_est = ex + flr((ew - (#est_txt * 4)) / 2)
+  print(est_txt, px_est, ey + 88, exp_test_hecho and 11 or 6)
 end
 
 
