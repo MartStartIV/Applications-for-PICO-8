@@ -66,7 +66,7 @@
 <!-- APP CARD START: ADD NOTES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>📝 Add Notes Xtree <kbd>V0.06</kbd></h3>
+  <h3>📝 Add Notes Xtree <kbd>V0.07</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.11</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.12</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -189,7 +189,15 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.28 (Counter Games Xtree V0.11) - current version</h4>
+    <h4>Version 0.29 (Counter Games Xtree V0.12 and Add Notes Xtree V0.07) - current version</h4>
+    <ul>
+      <li>Counter Games Xtree V0.12: Additional safeguards have been added to ensure that your stored data remains safe and accessible :)</li>
+      <li>Some of these newly added features have been stabilized.</li>
+      <li>Add Notes Xtree Multilingual V0.07: A critical issue with data saving in the "Storage Plus" function has been resolved.</li>
+      <li>A new feature has been added (an experimental section for functions operating at the very limits of what is permitted, designed to push PICO-8 further).</li>
+      <li>Several issues encountered during the process have been fixed :)</li>
+    </ul>
+    <h4>Version 0.28 (Counter Games Xtree V0.11)</h4>
     <ul>
       <li>A mini-shop has been added, allowing you to purchase accessories for the little frog, along with other extras, at the stated costs.</li>
       <li>Themes and effects have been integrated into the new shop.</li>
