@@ -126,7 +126,7 @@
   <!-- APP CARD START: COUNTER GAMES XTREE -->
 <div>
   <!-- APP HEADER -->
-  <h3>🏆 Counter Games Xtree <kbd>V0.12</kbd></h3>
+  <h3>🏆 Counter Games Xtree <kbd>V0.13</kbd></h3>
   
   <!-- APP DESCRIPTION -->
   <p>
@@ -189,7 +189,15 @@
   <details>
     <summary><strong>📋 Click to view Version History & Changelog</strong></summary>
     <br>
-    <h4>Version 0.29 (Counter Games Xtree V0.12 and Add Notes Xtree V0.07) - current version</h4>
+    <h4>Version 0.30 (Counter Games Xtree V0.13) - current version</h4>
+    <ul>
+      <li>A new compression technique has been implemented; it dynamically adjusts based on the total counter value, allowing you to exceed previously established limits.</li>
+      <li>A new approach enables a greater number of categories in "extended storage" mode, utilizing more aggressive data compression and more precise storage calculation formulas.</li>
+      <li>An automated space reclamation system has been added, which triggers when these values ​​decrease.</li>
+      <li>Several issues identified during the app's improvement process have been resolved. :)</li>
+      <li>Please note: If you are using version 0.12 with "extended storage" enabled, your existing data might not be recognized. We recommend taking screenshots of your results so you can restore them later.</li>
+    </ul>
+    <h4>Version 0.29 (Counter Games Xtree V0.12 and Add Notes Xtree V0.07)</h4>
     <ul>
       <li>Counter Games Xtree V0.12: Additional safeguards have been added to ensure that your stored data remains safe and accessible :)</li>
       <li>Some of these newly added features have been stabilized.</li>
