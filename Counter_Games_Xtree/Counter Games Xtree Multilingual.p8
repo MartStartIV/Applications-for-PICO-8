@@ -2,7 +2,7 @@ pico-8 cartridge // http://pico-8.com
 version 42
 __lua__
 -- =========================================================
--- proyecto: counter games xtree [v0.12]
+-- proyecto: counter games xtree [v0.13]
 -- nucleo: picante8 libretro (mips ultra-compatible)
 -- parte 1a: utilidades base, 18 idiomas y paletas
 -- =========================================================
@@ -29,7 +29,7 @@ end
 
 function _init()
   app_nombre = "counter games xtree"
-  app_ver = "v0.12"
+  app_ver = "v0.13"
   estado = 0
   estado_prev = 2
   trans_t = 0
@@ -575,6 +575,7 @@ function guardar_datos()
   if mem_ext == 1 then
     dset(1, b_pack + (ui_fx / 8))
     local slot = 13
+    local hi_list = {}
     for j = 1, 8 do
       local g = mis_juegos[j]
       if g then
@@ -592,25 +593,53 @@ function guardar_datos()
         end
         local c = 1
         while c <= n_cats and slot <= 60 do
-          local cid1 = min(max(g.cats[c] or 1, 1), 60)
-          local val1 = min(max(flr(g.vals[c] or 0), 0), 255)
-          local ent_p = cid1 + (val1 * 64)
+          local v1 = min(max(flr(g.vals[c] or 0), 0), 255)
+          local v2 = (c + 1 <= n_cats) and min(max(flr(g.vals[c + 1] or 0), 0), 255) or 0
+          local v3 = (c + 2 <= n_cats) and min(max(flr(g.vals[c + 2] or 0), 0), 255) or 0
 
-          local dec_p = 0
-          if c + 1 <= n_cats then
-            local cid2 = min(max(g.cats[c + 1] or 1, 1), 60)
-            local val2 = min(max(flr(g.vals[c + 1] or 0), 0), 255)
-            dec_p = (cid2 + (val2 * 64)) / 16384
+          if c + 2 <= n_cats and v1 <= 3 and v2 <= 3 and v3 <= 3 then
+            local b1 = min(max(g.cats[c] or 1, 1), 60) + (v1 * 64)
+            local b2 = min(max(g.cats[c + 1] or 1, 1), 60) + (v2 * 64)
+            local b3 = min(max(g.cats[c + 2] or 1, 1), 60) + (v3 * 64)
+            local ent_t = 16384 + b1 + ((b2 % 64) * 256)
+            local dec_t = (flr(b2 / 64) + (b3 * 4)) / 1024
+            dset(slot, ent_t + dec_t)
+            slot = slot + 1
+            c = c + 3
+          else
+            if v1 >= 64 then
+              add(hi_list, (((j - 1) * 20) + (c - 1)) + (flr(v1 / 64) * 256))
+            end
+            local c1 = min(max(g.cats[c] or 1, 1), 60) + ((v1 % 64) * 64)
+            local c2 = 0
+            if c + 1 <= n_cats then
+              if v2 >= 64 then
+                add(hi_list, (((j - 1) * 20) + c) + (flr(v2 / 64) * 256))
+              end
+              c2 = min(max(g.cats[c + 1] or 1, 1), 60) + ((v2 % 64) * 64)
+            end
+            local ent_p = c1 + ((c2 % 4) * 4096)
+            local dec_p = flr(c2 / 4) / 1024
+            dset(slot, ent_p + dec_p)
+            slot = slot + 1
+            c = c + 2
           end
-
-          dset(slot, ent_p + dec_p)
-          slot = slot + 1
-          c = c + 2
         end
       else
         dset(4 + j, 0)
       end
     end
+
+    local h_idx = 1
+    while h_idx <= #hi_list and slot <= 60 do
+      local raw1 = hi_list[h_idx] or 0
+      local idx1 = raw1 % 256
+      local hi1 = min(flr(raw1 / 256), 15)
+      dset(slot, idx1 + (hi1 / 256))
+      slot = slot + 1
+      h_idx = h_idx + 1
+    end
+
     while slot <= 60 do
       dset(slot, 0)
       slot = slot + 1
@@ -694,6 +723,7 @@ function guardar_datos()
   if shop_own[#shop_own] then s63 = s63 + 512 end
   dset(63, u_ent + ((u4 + s63) / 16384))
 end
+
 
 -- =========================================================
 -- parte 2b: lectura de datos guardados (64 slots)
@@ -804,24 +834,59 @@ function cargar_datos()
             local sc = dget(slot) or 0
             slot = slot + 1
             local ent_p = flr(sc)
-            local dec_p = flr((sc - ent_p) * 16384 + 0.5)
-
-            local cid1 = ent_p % 64
-            local val1 = flr(ent_p / 64)
-            if cid1 < 1 or cid1 > 60 then cid1 = c end
-            add(g.cats, cid1)
-            add(g.vals, max(0, val1))
-
-            if c + 1 <= n_cats then
-              local cid2 = dec_p % 64
-              local val2 = flr(dec_p / 64)
-              if cid2 < 1 or cid2 > 60 then cid2 = c + 1 end
-              add(g.cats, cid2)
-              add(g.vals, max(0, val2))
+            local dec_p = flr((sc - ent_p) * 1024 + 0.5)
+            if ent_p >= 16384 then
+              local e_base = ent_p - 16384
+              local b1 = e_base % 256
+              local b2 = flr(e_base / 256) + ((dec_p % 4) * 64)
+              local b3 = flr(dec_p / 4)
+              local bs = {b1, b2, b3}
+              for k = 1, 3 do
+                if c + k - 1 <= n_cats then
+                  local bk = bs[k]
+                  local cid_k = bk % 64
+                  local val_k = flr(bk / 64)
+                  if cid_k < 1 or cid_k > 60 then cid_k = c + k - 1 end
+                  add(g.cats, cid_k)
+                  add(g.vals, max(0, val_k))
+                end
+              end
+              c = c + 3
+            else
+              local c1 = ent_p % 4096
+              local c2 = flr(ent_p / 4096) + (dec_p * 4)
+              local cid1 = c1 % 64
+              local val1 = flr(c1 / 64)
+              if cid1 < 1 or cid1 > 60 then cid1 = c end
+              add(g.cats, cid1)
+              add(g.vals, max(0, val1))
+              if c + 1 <= n_cats then
+                local cid2 = c2 % 64
+                local val2 = flr(c2 / 64)
+                if cid2 < 1 or cid2 > 60 then cid2 = c + 1 end
+                add(g.cats, cid2)
+                add(g.vals, max(0, val2))
+              end
+              c = c + 2
             end
-            c = c + 2
           end
           add(mis_juegos, g)
+        end
+      end
+
+      while slot <= 60 do
+        local sc = dget(slot) or 0
+        slot = slot + 1
+        if sc > 0 then
+          local idx_flat = flr(sc)
+          local hv = flr((sc - idx_flat) * 256 + 0.5)
+          if hv > 0 then
+            local j_id = flr(idx_flat / 20) + 1
+            local c_id = (idx_flat % 20) + 1
+            if mis_juegos[j_id] and mis_juegos[j_id].vals[c_id] then
+              mis_juegos[j_id].vals[c_id] = mis_juegos[j_id].vals[c_id] + (hv * 64)
+            end
+          end
         end
       end
     else
@@ -911,7 +976,6 @@ function cargar_datos()
     estado = 0
   end
 end
-
 
 
 function borrar_todo_guardado()
@@ -1101,23 +1165,48 @@ end
 -- =========================================================
 
 function calc_mem_libre()
-  local slots_tot = (mem_ext == 1) and 48 or 52
+  if mem_ext == 0 then
+    local slots_usados = 0
+    for j = 1, #mis_juegos do
+      local g = mis_juegos[j]
+      if not g.id_juego or g.id_juego == 0 then slots_usados = slots_usados + 2 end
+      slots_usados = slots_usados + #g.cats
+    end
+    local libres = max(0, 52 - slots_usados)
+    return libres, max(0, min(4 - #mis_juegos, flr(libres / 12))), 4
+  end
+
   local slots_usados = 0
+  local extras_hi = 0
   for j = 1, #mis_juegos do
     local g = mis_juegos[j]
-    if not g.id_juego or g.id_juego == 0 then
-      slots_usados = slots_usados + 2
-    end
+    if not g.id_juego or g.id_juego == 0 then slots_usados = slots_usados + 2 end
+    local c = 1
     local nc = #g.cats
-    slots_usados = slots_usados + ((mem_ext == 1) and flr((nc + 1) / 2) or nc)
+    while c <= nc do
+      local v1 = g.vals[c] or 0
+      local v2 = (c + 1 <= nc) and (g.vals[c + 1] or 0) or 0
+      local v3 = (c + 2 <= nc) and (g.vals[c + 2] or 0) or 0
+      if v1 >= 64 then extras_hi = extras_hi + 1 end
+      if c + 1 <= nc and v2 >= 64 then extras_hi = extras_hi + 1 end
+      if c + 2 <= nc and v3 >= 64 then extras_hi = extras_hi + 1 end
+
+      if c + 2 <= nc and v1 <= 3 and v2 <= 3 and v3 <= 3 then
+        slots_usados = slots_usados + 1
+        c = c + 3
+      else
+        slots_usados = slots_usados + 1
+        c = c + 2
+      end
+    end
   end
-  local slots_libres = max(0, slots_tot - slots_usados)
-  local cats_libres = (mem_ext == 1) and (slots_libres * 2) or slots_libres
-  local max_j = (mem_ext == 1) and 8 or 4
-  local j_por_mem = flr(cats_libres / 12)
-  local juegos_disp = min(max_j - #mis_juegos, j_por_mem)
-  return cats_libres, max(0, juegos_disp), max_j
+  slots_usados = slots_usados + extras_hi
+  local slots_libres = max(0, 48 - slots_usados)
+  local cats_libres = slots_libres * 3
+  local juegos_disp = min(8 - #mis_juegos, flr(cats_libres / 12))
+  return cats_libres, max(0, juegos_disp), 8
 end
+
 
 function actualizar_menu_principal()
   local k3 = 3
@@ -1615,8 +1704,16 @@ function actualizar_categorias_juego()
     local b_restar = btn_cfg[k2] or 5
 
     if btnp(b_sumar) then
+      local val_act = g.vals[cat_cursor] or 0
+      if mem_ext == 1 and (val_act == 3 or val_act == 63) then
+        local cats_lib, _, _ = calc_mem_libre()
+        if cats_lib < 3 then
+          mostrar_aviso(tr_shop(13), 40)
+          return
+        end
+      end
       local tope_v = (mem_ext == 1) and 255 or 32760
-      g.vals[cat_cursor] = min((g.vals[cat_cursor] or 0) + 1, tope_v)
+      g.vals[cat_cursor] = min(val_act + 1, tope_v)
       ultimo_cat_inc[juego_activo] = cat_cursor
       ultimo_hora_inc[juego_activo] = sub(reloj_str, 1, 5)
       guardar_datos()
@@ -1947,7 +2044,7 @@ function dibujar_selector_idioma()
   cls(0)
   rect(2, 2, 125, 125, 12)
   rectfill(4, 4, 123, 14, 1)
-  print("counter games xtree v0.12", 12, 7, 7)
+  print("counter games xtree v0.13", 12, 7, 7)
 
   local ini = max(1, min(idioma - 5, 18 - 10))
   for i = ini, min(18, ini + 10) do
@@ -2420,15 +2517,18 @@ function dibujar_categorias_juego(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, 
   rectfill(0, 0, 127, 22, c_pan)
   line(0, 22, 127, 22, c_acc)
   dibujar_portada_aislada(3, 2, gen, c_acc, c_txt)
-  print(sub(g.nombre, 1, 18), 24, 3, 7)
-  print(tr(5) .. " (" .. #g.cats .. "/" .. lim_c .. ")", 24, 12, c_txt)
+  print(sub(g.nombre, 1, 22), 24, 3, 7)
+
+  local der_s = "$" .. monedas
   if juegos_exp[juego_activo] and ult_i > 0 and g.cats[ult_i] then
-    local hr = ultimo_hora_inc[juego_activo]
-    local tag_u = "*" .. sub(cat_tr(g.cats[ult_i]), 1, 5) .. (hr != "" and (" " .. hr) or "")
-    print(tag_u, 78, 12, 10)
-  else
-    print("$" .. monedas, 104, 12, 10)
+    local hr = ultimo_hora_inc[juego_activo] or ""
+    der_s = "*" .. sub(cat_tr(g.cats[ult_i]), 1, 4) .. (hr != "" and (" " .. hr) or "")
   end
+  local x_der = 125 - (#der_s * 4)
+  local cnt_s = " (" .. #g.cats .. "/" .. lim_c .. ")"
+  local max_lbl = max(3, flr((x_der - 26 - (#cnt_s * 4)) / 4))
+  print(sub(tr(5), 1, max_lbl) .. cnt_s, 24, 12, c_txt)
+  print(der_s, x_der, 12, 10)
 
   if cat_cursor == 0 then
     rectfill(4, 25, 123, 34, c_acc)
@@ -2675,7 +2775,6 @@ function dibujar_categorias_juego(c_bg, c_pan, c_txt, c_acc, c_atxt, idx_t_act, 
   end
 end
 
-
 -- =========================================================
 -- parte 6b: opciones, controles, creditos y mascota ranita
 -- =========================================================
@@ -2836,7 +2935,7 @@ function dibujar_acercade()
     "=== " .. tr(11) .. " ===",
     "",
     "counter games xtree",
-    "version: v0.12",
+    "version: v0.13",
     "",
     tr(37),
     "martstartiv",
